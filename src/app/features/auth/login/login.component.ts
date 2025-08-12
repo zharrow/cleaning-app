@@ -6,7 +6,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { LucideAngularModule, LogIn, Mail, Lock, AlertCircle } from 'lucide-angular';
+import { LucideAngularModule } from 'lucide-angular';
 
 /**
  * Composant de connexion

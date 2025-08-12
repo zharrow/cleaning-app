@@ -6,7 +6,7 @@ import { SessionService } from '../session/session.service';
 import { TaskService } from '../tasks/task.service';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
 import { StatsCardComponent } from '../../shared/components/stats-card/stats-card.component';
-import { LucideAngularModule, Calendar, CheckCircle, Clock, Users } from 'lucide-angular';
+import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-dashboard',

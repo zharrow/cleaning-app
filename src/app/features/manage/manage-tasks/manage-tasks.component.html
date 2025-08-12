@@ -1,0 +1,169 @@
+<div class="min-h-screen bg-gray-50">
+      <app-navbar></app-navbar>
+      
+      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h1 class="text-2xl font-bold text-gray-900">Gestion des tâches</h1>
+              <p class="text-gray-600 mt-1">Gérez les modèles de tâches et les assignations</p>
+            </div>
+            <button
+              (click)="showAddForm = true"
+              class="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            >
+              <lucide-icon name="plus" [size]="20"></lucide-icon>
+              <span>Nouvelle tâche</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Formulaire d'ajout -->
+        @if (showAddForm) {
+          <div class="bg-white rounded-xl shadow-sm p-6 mb-6 border-2 border-primary-200">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Ajouter une nouvelle tâche</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nom de la tâche *</label>
+                <input
+                  type="text"
+                  [(ngModel)]="newTask.name"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  placeholder="Ex: Nettoyer les surfaces"
+                />
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Pièce *</label>
+                <select
+                  [(ngModel)]="newTask.room_id"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Sélectionner une pièce</option>
+                  @for (room of taskService.rooms(); track room.id) {
+                    <option [value]="room.id">{{ room.name }}</option>
+                  }
+                </select>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Exécutant par défaut *</label>
+                <select
+                  [(ngModel)]="newTask.default_performer_id"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Sélectionner un exécutant</option>
+                  @for (performer of taskService.performers(); track performer.id) {
+                    <option [value]="performer.id">{{ performer.name }}</option>
+                  }
+                </select>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Fréquence (jours)</label>
+                <input
+                  type="number"
+                  [(ngModel)]="newTask.frequency_days"
+                  min="1"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  [(ngModel)]="newTask.description"
+                  rows="2"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  placeholder="Description détaillée de la tâche..."
+                ></textarea>
+              </div>
+            </div>
+            
+            <div class="flex justify-end gap-3 mt-4">
+              <button
+                (click)="cancelAdd()"
+                class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <lucide-icon name="x" [size]="20" class="inline mr-1"></lucide-icon>
+                Annuler
+              </button>
+              <button
+                (click)="saveNewTask()"
+                [disabled]="!isNewTaskValid()"
+                class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <lucide-icon name="save" [size]="20" class="inline mr-1"></lucide-icon>
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- Liste des tâches existantes -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b bg-gray-50">
+            <h2 class="font-semibold text-gray-900">Tâches configurées</h2>
+          </div>
+          
+          @if (taskService.isLoading()) {
+            <div class="p-6 space-y-3">
+              @for (i of [1,2,3]; track i) {
+                <div class="h-20 bg-gray-100 rounded-lg skeleton"></div>
+              }
+            </div>
+          } @else {
+            <div class="divide-y">
+              @for (task of taskService.assignedTasks(); track task.id) {
+                <div class="p-6 hover:bg-gray-50 transition-colors">
+                  <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                      <h3 class="font-medium text-gray-900">{{ task.task_template.name }}</h3>
+                      @if (task.task_template.description) {
+                        <p class="text-sm text-gray-600 mt-1">{{ task.task_template.description }}</p>
+                      }
+                      
+                      <div class="flex flex-wrap gap-3 mt-2">
+                        <span class="text-sm">
+                          <span class="text-gray-500">Pièce:</span>
+                          <span class="font-medium ml-1">{{ task.room.name }}</span>
+                        </span>
+                        <span class="text-sm">
+                          <span class="text-gray-500">Exécutant:</span>
+                          <span class="font-medium ml-1">{{ task.default_performer.name }}</span>
+                        </span>
+                        <span class="text-sm">
+                          <span class="text-gray-500">Fréquence:</span>
+                          <span class="font-medium ml-1">
+                            {{ task.frequency_days === 1 ? 'Quotidien' : 'Tous les ' + task.frequency_days + ' jours' }}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 ml-4">
+                      <button
+                        (click)="editTask(task)"
+                        class="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                        title="Modifier"
+                      >
+                        <lucide-icon name="edit-2" [size]="18"></lucide-icon>
+                      </button>
+                      <button
+                        (click)="deleteTask(task)"
+                        class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Supprimer"
+                      >
+                        <lucide-icon name="trash-2" [size]="18"></lucide-icon>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </main>
+    </div>

@@ -7,7 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { NavbarComponent } from '../../../shared/components/navbar/navbar.component';
 import { TaskService } from '../task.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { LucideAngularModule, Plus, Edit, Trash2, Search, Filter } from 'lucide-angular';
+import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-task-list',
