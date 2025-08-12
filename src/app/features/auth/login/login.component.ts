@@ -1,13 +1,17 @@
 // ========================================
 // src/app/features/auth/login/login.component.ts
 // ========================================
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LucideAngularModule, LogIn, Mail, Lock, AlertCircle } from 'lucide-angular';
 
+/**
+ * Composant de connexion
+ * Gère l'authentification Firebase et la redirection
+ */
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -28,6 +32,7 @@ import { LucideAngularModule, LogIn, Mail, Lock, AlertCircle } from 'lucide-angu
         <div class="bg-white rounded-2xl shadow-xl p-8">
           <h2 class="text-2xl font-semibold text-gray-900 mb-6">Connexion</h2>
           
+          <!-- Message d'erreur -->
           @if (authError()) {
             <div class="mb-4 p-3 bg-danger-50 border border-danger-200 rounded-lg flex items-start gap-2">
               <lucide-icon name="alert-circle" [size]="20" class="text-danger-600 mt-0.5"></lucide-icon>
@@ -35,6 +40,7 @@ import { LucideAngularModule, LogIn, Mail, Lock, AlertCircle } from 'lucide-angu
             </div>
           }
 
+          <!-- Formulaire -->
           <form (ngSubmit)="handleLogin()" class="space-y-5">
             <!-- Email -->
             <div>
@@ -43,16 +49,16 @@ import { LucideAngularModule, LogIn, Mail, Lock, AlertCircle } from 'lucide-angu
               </label>
               <div class="relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <lucide-icon name="mail" [size]="20" class="text-gray-400"></lucide-icon>
+                  <lucide-icon name="mail" [size]="18" class="text-gray-400"></lucide-icon>
                 </div>
                 <input
                   type="email"
                   [(ngModel)]="email"
                   name="email"
                   required
-                  class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                  placeholder="gerante@microcreche.fr"
                   [disabled]="isLoading()"
+                  placeholder="votre@email.com"
+                  class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors"
                 />
               </div>
             </div>
@@ -64,16 +70,16 @@ import { LucideAngularModule, LogIn, Mail, Lock, AlertCircle } from 'lucide-angu
               </label>
               <div class="relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <lucide-icon name="lock" [size]="20" class="text-gray-400"></lucide-icon>
+                  <lucide-icon name="lock" [size]="18" class="text-gray-400"></lucide-icon>
                 </div>
                 <input
                   type="password"
                   [(ngModel)]="password"
                   name="password"
                   required
-                  class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                  placeholder="••••••••"
                   [disabled]="isLoading()"
+                  placeholder="••••••••"
+                  class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors"
                 />
               </div>
             </div>
@@ -81,7 +87,7 @@ import { LucideAngularModule, LogIn, Mail, Lock, AlertCircle } from 'lucide-angu
             <!-- Bouton de connexion -->
             <button
               type="submit"
-              [disabled]="isLoading()"
+              [disabled]="isLoading() || !email || !password"
               class="w-full flex items-center justify-center gap-2 py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               @if (isLoading()) {
@@ -94,52 +100,112 @@ import { LucideAngularModule, LogIn, Mail, Lock, AlertCircle } from 'lucide-angu
             </button>
           </form>
 
-          <!-- Version de test -->
+          <!-- Informations de test -->
           <div class="mt-6 pt-6 border-t border-gray-200">
             <p class="text-xs text-gray-500 text-center">
               Version de test - Utilisez vos identifiants Firebase
             </p>
+            
+            <!-- Debug info en développement -->
+            @if (showDebugInfo) {
+              <div class="mt-4 p-3 bg-gray-100 rounded text-xs text-gray-600">
+                <p class="font-semibold mb-1">🐛 Debug Info:</p>
+                <p>Auth Ready: {{ authService.authReady() }}</p>
+                <p>Is Authenticated: {{ authService.isAuthenticated() }}</p>
+                <p>Return URL: {{ returnUrl || 'none' }}</p>
+              </div>
+            }
           </div>
         </div>
       </div>
     </div>
   `,
-  styles: []
+  styles: [`
+    @keyframes slide-up {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .animate-slide-up {
+      animation: slide-up 0.5s ease-out;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+  `]
 })
-export class LoginComponent {
-  private authService = inject(AuthService);
-  private router = inject(Router);
+export class LoginComponent implements OnInit {
+  readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   
+  // Champs du formulaire
   email = '';
   password = '';
   
-  isLoading = signal(false);
-  authError = signal<string | null>(null);
+  // Signals pour l'état
+  readonly isLoading = signal(false);
+  readonly authError = signal<string | null>(null);
   
-  constructor() {
-    // Configure les icônes Lucide
-    this.configureLucideIcons();
+  // URL de retour après connexion
+  returnUrl: string | null = null;
+  
+  // Debug mode (désactiver en production)
+  readonly showDebugInfo = false; // Mettre à true pour debug
+  
+  ngOnInit() {
+    // Récupérer l'URL de retour depuis les query params
+    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
+    console.log('🔗 Login: Return URL =', this.returnUrl);
   }
   
+  /**
+   * Gère la soumission du formulaire de connexion
+   */
   async handleLogin() {
+    // Validation basique
     if (!this.email || !this.password) {
       this.authError.set('Veuillez remplir tous les champs');
       return;
     }
     
-    this.isLoading.set(true);
+    // Réinitialiser l'erreur
     this.authError.set(null);
+    this.isLoading.set(true);
     
     try {
+      console.log('🔐 Tentative de connexion...');
+      
+      // Appel au service d'authentification
       await this.authService.signIn(this.email, this.password);
+      
+      console.log('✅ Connexion réussie!');
+      
+      // La redirection est gérée dans le service auth
+      // mais on peut forcer si nécessaire
+      if (this.returnUrl && this.returnUrl !== '/login') {
+        await this.router.navigate([this.returnUrl]);
+      }
     } catch (error: any) {
-      this.authError.set(error.message || 'Erreur de connexion');
+      console.error('❌ Erreur de connexion:', error);
+      
+      // Afficher l'erreur
+      this.authError.set(
+        error.message || 'Une erreur est survenue lors de la connexion'
+      );
     } finally {
       this.isLoading.set(false);
     }
-  }
-  
-  private configureLucideIcons() {
-    // Les icônes sont automatiquement disponibles via LucideAngularModule
   }
 }

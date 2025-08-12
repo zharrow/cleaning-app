@@ -1,9 +1,16 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+// ========================================
+// src/app/core/services/auth.service.ts
+// ========================================
+import { Injectable, inject, signal, computed, effect } from '@angular/core';
 import { Auth, signInWithEmailAndPassword, signOut, onAuthStateChanged, User } from '@angular/fire/auth';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { firstValueFrom } from 'rxjs';
 
+/**
+ * Interface représentant un utilisateur de l'application
+ */
 export interface AppUser {
   id: string;
   firebase_uid: string;
@@ -12,84 +19,191 @@ export interface AppUser {
   created_at: string;
 }
 
+/**
+ * Service de gestion de l'authentification Firebase
+ * Gère la connexion, déconnexion et l'état de l'utilisateur
+ */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private auth = inject(Auth);
-  private router = inject(Router);
-  private http = inject(HttpClient);
+  private readonly auth = inject(Auth);
+  private readonly router = inject(Router);
+  private readonly http = inject(HttpClient);
   
-  // Signals pour l'état
-  private currentUserSignal = signal<User | null>(null);
-  private appUserSignal = signal<AppUser | null>(null);
-  private loadingSignal = signal(true);
-  private errorSignal = signal<string | null>(null);
+  // Signals pour gérer l'état de l'authentification
+  private readonly currentUserSignal = signal<User | null>(null);
+  private readonly appUserSignal = signal<AppUser | null>(null);
+  private readonly loadingSignal = signal(true);
+  private readonly errorSignal = signal<string | null>(null);
+  private readonly authCheckCompleted = signal(false);
   
-  // Computed signals
-  currentUser = this.currentUserSignal.asReadonly();
-  appUser = this.appUserSignal.asReadonly();
-  isAuthenticated = computed(() => !!this.currentUserSignal());
-  isLoading = this.loadingSignal.asReadonly();
-  error = this.errorSignal.asReadonly();
+  // Signals publics en lecture seule
+  readonly currentUser = this.currentUserSignal.asReadonly();
+  readonly appUser = this.appUserSignal.asReadonly();
+  readonly isAuthenticated = computed(() => !!this.currentUserSignal()); // CORRECTION ICI
+  readonly isLoading = this.loadingSignal.asReadonly();
+  readonly error = this.errorSignal.asReadonly();
+  readonly authReady = this.authCheckCompleted.asReadonly();
   
-  initializeAuth() {
+  constructor() {
+    // Initialiser l'authentification automatiquement
+    this.initializeAuth();
+  }
+  
+  /**
+   * Initialise l'écouteur d'état Firebase Auth
+   * Appelé automatiquement dans le constructeur
+   */
+  private initializeAuth(): void {
+    console.log('🔐 Initialisation de l\'authentification...');
+    
     onAuthStateChanged(this.auth, async (user) => {
+      console.log('🔄 État auth changé:', user?.email || 'non connecté');
+      
       this.currentUserSignal.set(user);
       
       if (user) {
+        // Utilisateur connecté - récupérer les données
         await this.fetchAppUser();
+        
+        // Rediriger vers dashboard si on est sur login
+        if (window.location.pathname === '/login') {
+          console.log('➡️ Redirection vers dashboard');
+          this.router.navigate(['/dashboard']);
+        }
       } else {
+        // Utilisateur déconnecté
         this.appUserSignal.set(null);
+        
+        // Rediriger vers login si nécessaire
+        if (window.location.pathname !== '/login') {
+          console.log('➡️ Redirection vers login');
+          this.router.navigate(['/login']);
+        }
       }
       
       this.loadingSignal.set(false);
+      this.authCheckCompleted.set(true);
     });
   }
   
+  /**
+   * Connexion avec email et mot de passe
+   * @param email Email de l'utilisateur
+   * @param password Mot de passe
+   */
   async signIn(email: string, password: string): Promise<void> {
+    console.log('🔑 Tentative de connexion pour:', email);
+    
     this.loadingSignal.set(true);
     this.errorSignal.set(null);
     
     try {
       const credential = await signInWithEmailAndPassword(this.auth, email, password);
+      console.log('✅ Connexion réussie:', credential.user.email);
+      
       this.currentUserSignal.set(credential.user);
+      
+      // Récupérer les données utilisateur depuis l'API
       await this.fetchAppUser();
-      this.router.navigate(['/dashboard']);
+      
+      // Navigation vers dashboard
+      console.log('➡️ Navigation vers dashboard...');
+      await this.router.navigate(['/dashboard']);
     } catch (error: any) {
-      this.errorSignal.set(this.getErrorMessage(error.code));
-      throw error;
+      console.error('❌ Erreur de connexion:', error);
+      const errorMessage = this.getErrorMessage(error.code);
+      this.errorSignal.set(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       this.loadingSignal.set(false);
     }
   }
   
+  /**
+   * Déconnexion de l'utilisateur
+   */
   async signOutUser(): Promise<void> {
+    console.log('🚪 Déconnexion...');
+    
     try {
       await signOut(this.auth);
       this.currentUserSignal.set(null);
       this.appUserSignal.set(null);
-      this.router.navigate(['/login']);
+      console.log('✅ Déconnexion réussie');
+      await this.router.navigate(['/login']);
     } catch (error) {
-      console.error('Erreur lors de la déconnexion:', error);
+      console.error('❌ Erreur lors de la déconnexion:', error);
+      throw error;
     }
   }
   
+  /**
+   * Récupère le token Firebase pour les appels API
+   * @returns Token JWT ou null
+   */
   async getIdToken(): Promise<string | null> {
     const user = this.currentUserSignal();
     if (!user) return null;
-    return user.getIdToken();
-  }
-  
-  private async fetchAppUser(): Promise<void> {
+    
     try {
-      const response = await this.http.get<AppUser>(`${environment.apiUrl}/users/me`).toPromise();
-      if (response) {
-        this.appUserSignal.set(response);
-      }
+      return await user.getIdToken();
     } catch (error) {
-      console.error('Erreur lors de la récupération du profil:', error);
+      console.error('Erreur récupération token:', error);
+      return null;
     }
   }
   
+  /**
+   * Attendre que la vérification d'authentification soit terminée
+   * Utile pour les guards
+   */
+  async waitForAuthCheck(): Promise<boolean> {
+    // Si déjà vérifié, retourner immédiatement
+    if (this.authCheckCompleted()) {
+      return this.isAuthenticated();
+    }
+    
+    // Attendre que la vérification soit terminée (max 5 secondes)
+    const maxWait = 5000;
+    const checkInterval = 100;
+    let waited = 0;
+    
+    while (!this.authCheckCompleted() && waited < maxWait) {
+      await new Promise(resolve => setTimeout(resolve, checkInterval));
+      waited += checkInterval;
+    }
+    
+    return this.isAuthenticated();
+  }
+  
+  /**
+   * Récupère les données utilisateur depuis l'API backend
+   */
+  private async fetchAppUser(): Promise<void> {
+    try {
+      console.log('📥 Récupération du profil utilisateur...');
+      
+      // Utiliser firstValueFrom pour convertir Observable en Promise
+      const response = await firstValueFrom(
+        this.http.get<AppUser>(`${environment.apiUrl}/users/me`)
+      );
+      
+      if (response) {
+        this.appUserSignal.set(response);
+        console.log('✅ Profil récupéré:', response.full_name);
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur récupération profil (API peut-être indisponible):', error);
+      // Ne pas bloquer la connexion si l'API backend est down
+      // L'utilisateur peut quand même accéder à l'app
+    }
+  }
+  
+  /**
+   * Traduit les codes d'erreur Firebase en messages français
+   * @param code Code d'erreur Firebase
+   * @returns Message d'erreur en français
+   */
   private getErrorMessage(code: string): string {
     const messages: Record<string, string> = {
       'auth/invalid-email': 'Email invalide',
@@ -97,8 +211,11 @@ export class AuthService {
       'auth/user-not-found': 'Utilisateur non trouvé',
       'auth/wrong-password': 'Mot de passe incorrect',
       'auth/invalid-credential': 'Identifiants invalides',
-      'auth/too-many-requests': 'Trop de tentatives, réessayez plus tard'
+      'auth/too-many-requests': 'Trop de tentatives, réessayez plus tard',
+      'auth/network-request-failed': 'Erreur réseau, vérifiez votre connexion',
+      'auth/invalid-login-credentials': 'Email ou mot de passe incorrect'
     };
-    return messages[code] || 'Une erreur est survenue';
+    
+    return messages[code] || 'Une erreur est survenue lors de la connexion';
   }
 }
