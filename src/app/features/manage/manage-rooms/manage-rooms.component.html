@@ -1,0 +1,164 @@
+<div class="min-h-screen bg-gray-50">
+      <app-navbar></app-navbar>
+      
+      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h1 class="text-2xl font-bold text-gray-900">Gestion des pièces</h1>
+              <p class="text-gray-600 mt-1">Configurez les espaces de la micro-crèche</p>
+            </div>
+            <button
+              (click)="showAddForm = true"
+              class="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            >
+              <lucide-icon name="plus" [size]="20"></lucide-icon>
+              <span>Nouvelle pièce</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Formulaire d'ajout -->
+        @if (showAddForm) {
+          <div class="bg-white rounded-xl shadow-sm p-6 mb-6 border-2 border-primary-200">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Ajouter une nouvelle pièce</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nom de la pièce *</label>
+                <input
+                  type="text"
+                  [(ngModel)]="newRoom.name"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  placeholder="Ex: Salle de jeu"
+                />
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Ordre d'affichage</label>
+                <input
+                  type="number"
+                  [(ngModel)]="newRoom.display_order"
+                  min="0"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  [(ngModel)]="newRoom.description"
+                  rows="2"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  placeholder="Description de la pièce..."
+                ></textarea>
+              </div>
+            </div>
+            
+            <div class="flex justify-end gap-3 mt-4">
+              <button
+                (click)="cancelAdd()"
+                class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <lucide-icon name="x" [size]="20" class="inline mr-1"></lucide-icon>
+                Annuler
+              </button>
+              <button
+                (click)="saveNewRoom()"
+                [disabled]="!newRoom.name"
+                class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <lucide-icon name="save" [size]="20" class="inline mr-1"></lucide-icon>
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- Liste des pièces -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b bg-gray-50">
+            <h2 class="font-semibold text-gray-900">Pièces configurées</h2>
+          </div>
+          
+          @if (taskService.isLoading()) {
+            <div class="p-6 space-y-3">
+              @for (i of [1,2,3,4]; track i) {
+                <div class="h-20 bg-gray-100 rounded-lg skeleton"></div>
+              }
+            </div>
+          } @else {
+            <div class="divide-y">
+              @for (room of sortedRooms(); track room.id; let idx = $index) {
+                <div class="p-6 hover:bg-gray-50 transition-colors">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                      <div class="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
+                        <lucide-icon name="home" [size]="24" class="text-primary-600"></lucide-icon>
+                      </div>
+                      <div>
+                        <h3 class="font-medium text-gray-900">{{ room.name }}</h3>
+                        @if (room.description) {
+                          <p class="text-sm text-gray-600 mt-1">{{ room.description }}</p>
+                        }
+                        <div class="flex items-center gap-4 mt-2">
+                          <span class="text-xs text-gray-500">
+                            Ordre: {{ room.display_order }}
+                          </span>
+                          <span class="text-xs px-2 py-1 rounded-full"
+                                [class.bg-green-100]="room.is_active"
+                                [class.text-green-700]="room.is_active"
+                                [class.bg-gray-100]="!room.is_active"
+                                [class.text-gray-700]="!room.is_active">
+                            {{ room.is_active ? 'Active' : 'Inactive' }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                      <!-- Boutons de tri -->
+                      <button
+                        (click)="moveRoom(room, -1)"
+                        [disabled]="idx === 0"
+                        class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Monter"
+                      >
+                        <lucide-icon name="arrow-up" [size]="18"></lucide-icon>
+                      </button>
+                      <button
+                        (click)="moveRoom(room, 1)"
+                        [disabled]="idx === sortedRooms().length - 1"
+                        class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Descendre"
+                      >
+                        <lucide-icon name="arrow-down" [size]="18"></lucide-icon>
+                      </button>
+                      
+                      <div class="w-px h-6 bg-gray-300 mx-1"></div>
+                      
+                      <!-- Actions -->
+                      <button
+                        (click)="editRoom(room)"
+                        class="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                        title="Modifier"
+                      >
+                        <lucide-icon name="edit-2" [size]="18"></lucide-icon>
+                      </button>
+                      <button
+                        (click)="deleteRoom(room)"
+                        class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Supprimer"
+                      >
+                        <lucide-icon name="trash-2" [size]="18"></lucide-icon>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </main>
+    </div>

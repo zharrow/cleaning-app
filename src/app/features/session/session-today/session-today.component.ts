@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { NavbarComponent } from '../../../shared/components/navbar/navbar.component';
 import { SessionService, CleaningLog } from '../session.service';
 import { TaskService } from '../../tasks/task.service';
-import { LucideAngularModule, CheckCircle, Clock, X, Camera, Plus } from 'lucide-angular';
+import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-session-today',

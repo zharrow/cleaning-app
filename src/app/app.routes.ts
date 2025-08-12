@@ -37,14 +37,14 @@ export const routes: Routes = [
   },
   // Management routes (admin/manager)
   {
-    path: 'manage/tasks',
-    loadComponent: () => import('./features/tasks/task-list/task-list.component').then(m => m.TaskListComponent),
+  path: 'manage/tasks',
+  loadComponent: () => import('./features/manage/manage-tasks/manage-tasks.component').then(m => m.ManageTasksComponent),
   canActivate: [manageGuard]
   },
   {
     path: 'manage/rooms',
-    loadComponent: () => import('./features/tasks/task-list/task-list.component').then(m => m.TaskListComponent), // TODO: replace with rooms component when available
-  canActivate: [manageGuard]
+    loadComponent: () => import('./features/manage/manage-rooms/manage-rooms.component').then(m => m.ManageRoomsComponent),
+    canActivate: [manageGuard]
   },
   {
     path: 'profile',
