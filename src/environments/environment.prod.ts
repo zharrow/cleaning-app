@@ -1,3 +1,6 @@
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+
 export const environment = {
   production: true,
   firebase: {
@@ -10,3 +13,6 @@ export const environment = {
   },
   apiUrl: 'https://api.your-domain.com'
 };
+
+const app = initializeApp(environment.firebase);
+const analytics = getAnalytics(app);
