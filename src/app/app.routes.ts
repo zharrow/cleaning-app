@@ -4,6 +4,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { publicGuard } from './core/guards/public.guard';
+import { manageGuard } from './core/guards/role.guard';
 
 /**
  * Configuration des routes de l'application
@@ -32,6 +33,22 @@ export const routes: Routes = [
   {
     path: 'tasks',
     loadComponent: () => import('./features/tasks/task-list/task-list.component').then(m => m.TaskListComponent),
+    canActivate: [authGuard]
+  },
+  // Management routes (admin/manager)
+  {
+    path: 'manage/tasks',
+    loadComponent: () => import('./features/tasks/task-list/task-list.component').then(m => m.TaskListComponent),
+  canActivate: [manageGuard]
+  },
+  {
+    path: 'manage/rooms',
+    loadComponent: () => import('./features/tasks/task-list/task-list.component').then(m => m.TaskListComponent), // TODO: replace with rooms component when available
+  canActivate: [manageGuard]
+  },
+  {
+    path: 'profile',
+    loadComponent: () => import('./features/profile/profile.component').then(m => m.ProfileComponent),
     canActivate: [authGuard]
   },
   

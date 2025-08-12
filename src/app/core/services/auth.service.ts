@@ -11,11 +11,13 @@ import { firstValueFrom } from 'rxjs';
 /**
  * Interface représentant un utilisateur de l'application
  */
+export type AppRole = 'admin' | 'manager' | 'gerante';
+
 export interface AppUser {
   id: string;
   firebase_uid: string;
   full_name: string;
-  role: 'gerante';
+  role: AppRole;
   created_at: string;
 }
 
@@ -35,6 +37,8 @@ export class AuthService {
   private readonly loadingSignal = signal(true);
   private readonly errorSignal = signal<string | null>(null);
   private readonly authCheckCompleted = signal(false);
+  // Dev-only role override (non-production)
+  private readonly devRoleSignal = signal<AppRole | null>(null);
   
   // Signals publics en lecture seule
   readonly currentUser = this.currentUserSignal.asReadonly();
@@ -43,10 +47,65 @@ export class AuthService {
   readonly isLoading = this.loadingSignal.asReadonly();
   readonly error = this.errorSignal.asReadonly();
   readonly authReady = this.authCheckCompleted.asReadonly();
+
+  // Role helpers
+  readonly userRole = computed<AppRole | null>(() => this.appUserSignal()?.role ?? null);
+  // Normalize to permission tiers; allow dev override when not in production
+  readonly normalizedRole = computed<'admin' | 'manager' | null>(() => {
+    const override = !environment.production ? this.devRoleSignal() : null;
+    const r = (override ?? this.userRole()) as AppRole | null;
+    if (!r) return null;
+    return r === 'admin' ? 'admin' : 'manager';
+  });
+  readonly canManage = computed(() => this.normalizedRole() === 'admin' || this.normalizedRole() === 'manager');
+
+  hasRole(role: AppRole | 'admin' | 'manager'): boolean {
+    const norm = this.normalizedRole();
+    if (!norm) return false;
+    // If asked for 'gerante', treat as manager equivalence
+    if (role === 'gerante') return norm === 'manager';
+    return norm === role;
+  }
+
+  hasAnyRole(roles: Array<AppRole | 'admin' | 'manager'>): boolean {
+    return roles.some(r => this.hasRole(r));
+  }
   
   constructor() {
     // Initialiser l'authentification automatiquement
     this.initializeAuth();
+    
+    // Charger un éventuel override de rôle en dev
+    if (!environment.production) {
+      this.loadDevRoleFromStorage();
+      // Petites aides debug accessibles depuis la console
+      (window as any).authDebug = {
+        setRole: (role: AppRole | null) => this.setDevRole(role),
+        getRole: () => this.devRoleSignal(),
+        clearRole: () => this.setDevRole(null),
+      };
+    }
+  }
+  
+  private loadDevRoleFromStorage(): void {
+    try {
+      const v = localStorage.getItem('devRole');
+      if (v === 'admin' || v === 'manager' || v === 'gerante') {
+        this.devRoleSignal.set(v);
+      }
+    } catch {}
+  }
+
+  setDevRole(role: AppRole | null): void {
+    if (environment.production) return; // Sécurité
+    try {
+      if (role) {
+        localStorage.setItem('devRole', role);
+      } else {
+        localStorage.removeItem('devRole');
+      }
+      this.devRoleSignal.set(role);
+    } catch {}
   }
   
   /**

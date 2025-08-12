@@ -1,11 +1,12 @@
 // ========================================
 // src/app/features/tasks/task-list/task-list.component.ts
 // ========================================
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NavbarComponent } from '../../../shared/components/navbar/navbar.component';
 import { TaskService } from '../task.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { LucideAngularModule, Plus, Edit, Trash2, Search, Filter } from 'lucide-angular';
 
 @Component({
@@ -23,6 +24,7 @@ import { LucideAngularModule, Plus, Edit, Trash2, Search, Filter } from 'lucide-
             <h1 class="text-2xl font-bold text-gray-900">Gestion des tâches</h1>
             <p class="text-gray-600 mt-1">{{ taskService.activeTasksCount() }} tâches actives</p>
           </div>
+          @if (canManage()) {
           <button
             (click)="openAddTaskModal()"
             class="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
@@ -30,6 +32,7 @@ import { LucideAngularModule, Plus, Edit, Trash2, Search, Filter } from 'lucide-
             <lucide-icon name="plus" [size]="20"></lucide-icon>
             <span>Nouvelle tâche</span>
           </button>
+          }
         </div>
 
         <!-- Filtres -->
@@ -127,6 +130,7 @@ import { LucideAngularModule, Plus, Edit, Trash2, Search, Filter } from 'lucide-
                   </div>
                   
                   <!-- Actions -->
+                  @if (canManage()) {
                   <div class="flex items-center gap-2 ml-4">
                     <button
                       (click)="editTask(task)"
@@ -143,6 +147,7 @@ import { LucideAngularModule, Plus, Edit, Trash2, Search, Filter } from 'lucide-
                       <lucide-icon name="trash-2" [size]="18"></lucide-icon>
                     </button>
                   </div>
+                  }
                 </div>
               </div>
             }
@@ -161,6 +166,8 @@ import { LucideAngularModule, Plus, Edit, Trash2, Search, Filter } from 'lucide-
 })
 export class TaskListComponent implements OnInit {
   taskService = inject(TaskService);
+  auth = inject(AuthService);
+  canManage = computed(() => this.auth.canManage());
   
   searchQuery = '';
   filterRoom = '';

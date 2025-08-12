@@ -1,8 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { LucideAngularModule, Home, Calendar, CheckSquare, Users, Settings, LogOut, Menu, X } from 'lucide-angular';
+import { LucideAngularModule, Home, Calendar, SquareCheckBig , Users, Settings, LogOut, Menu, X } from 'lucide-angular';
 
 @Component({
   selector: 'app-navbar',
@@ -54,28 +54,66 @@ import { LucideAngularModule, Home, Calendar, CheckSquare, Users, Settings, LogO
           
           <!-- Menu utilisateur -->
           <div class="flex items-center gap-4">
-            <!-- Info utilisateur -->
-            <div class="hidden md:flex items-center gap-3">
-              <div class="text-right">
-                <p class="text-sm font-medium text-gray-900">{{ userName() }}</p>
-                <p class="text-xs text-gray-500">Gérante</p>
-              </div>
-              <div class="w-9 h-9 bg-primary-100 rounded-full flex items-center justify-center">
-                <span class="text-sm font-medium text-primary-700">
-                  {{ getUserInitials() }}
-                </span>
-              </div>
+            <!-- User dropdown (desktop) -->
+            <div class="relative hidden md:block" (click)="$event.stopPropagation()">
+              <button (click)="toggleUserMenu()" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                <div class="text-right">
+                  <p class="text-sm font-medium text-gray-900">{{ userName() }}</p>
+                  <p class="text-xs text-gray-500">{{ roleLabel() }}</p>
+                </div>
+                <div class="w-9 h-9 bg-primary-100 rounded-full flex items-center justify-center">
+                  <span class="text-sm font-medium text-primary-700">{{ getUserInitials() }}</span>
+                </div>
+                <lucide-icon name="chevron-down" [size]="18" class="text-gray-500"></lucide-icon>
+              </button>
+
+              <!-- Dropdown panel -->
+              @if (isUserMenuOpen()) {
+                <div class="absolute right-0 mt-2 w-56 rounded-lg border bg-white shadow-md ring-1 ring-black/5 z-50 animate-fade-in">
+                  <!-- User info -->
+                  <div class="px-4 py-3">
+                    <p class="text-sm font-medium text-gray-900 truncate">{{ userName() }}</p>
+                    @if (userEmail()) {
+                      <p class="mt-1 text-xs text-gray-500 truncate">{{ userEmail() }}</p>
+                    }
+                  </div>
+                  <div class="py-1 border-t">
+                    @if (canManage()) {
+                      <a
+                        routerLink="/manage/tasks"
+                        (click)="closeUserMenu()"
+                        class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 w-full"
+                      >
+                        <lucide-icon name="settings" [size]="16"></lucide-icon>
+                        Gérer les tâches
+                      </a>
+                      <a
+                        routerLink="/manage/rooms"
+                        (click)="closeUserMenu()"
+                        class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 w-full"
+                      >
+                        <lucide-icon name="home" [size]="16"></lucide-icon>
+                        Gérer les pièces
+                      </a>
+                      <div class="my-1 border-t"></div>
+                    }
+                    <a
+                      routerLink="/profile"
+                      (click)="closeUserMenu()"
+                      class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 w-full"
+                    >
+                      <lucide-icon name="user" [size]="16"></lucide-icon>
+                      Profil
+                    </a>
+                    <button (click)="handleLogout(); closeUserMenu()" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                      <lucide-icon name="log-out" [size]="16"></lucide-icon>
+                      Se déconnecter
+                    </button>
+                  </div>
+                </div>
+              }
             </div>
-            
-            <!-- Bouton déconnexion -->
-            <button
-              (click)="handleLogout()"
-              class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Déconnexion"
-            >
-              <lucide-icon name="log-out" [size]="20"></lucide-icon>
-            </button>
-            
+
             <!-- Menu mobile -->
             <button
               (click)="toggleMobileMenu()"
@@ -127,8 +165,17 @@ export class NavbarComponent {
   private authService = inject(AuthService);
   
   isMobileMenuOpen = signal(false);
+  isUserMenuOpen = signal(false);
   
-  userName = signal(this.authService.appUser()?.full_name || 'Utilisateur');
+  userName = computed(() => this.authService.appUser()?.full_name || 'Utilisateur');
+  userEmail = computed(() => this.authService.currentUser()?.email || '');
+  roleLabel = computed(() => {
+    const role = this.authService.userRole();
+    if (role === 'admin') return 'Admin';
+    if (role === 'manager' || role === 'gerante') return 'Gérante';
+    return '';
+  });
+  canManage = computed(() => this.authService.canManage());
   
   getUserInitials(): string {
     const name = this.userName();
@@ -141,6 +188,22 @@ export class NavbarComponent {
   
   closeMobileMenu() {
     this.isMobileMenuOpen.set(false);
+  }
+  
+  toggleUserMenu() {
+    this.isUserMenuOpen.update(v => !v);
+  }
+  
+  closeUserMenu() {
+    this.isUserMenuOpen.set(false);
+  }
+  
+  @HostListener('document:click')
+  onDocumentClick() {
+    // Close user dropdown when clicking outside
+    if (this.isUserMenuOpen()) {
+      this.isUserMenuOpen.set(false);
+    }
   }
   
   async handleLogout() {
