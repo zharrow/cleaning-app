@@ -1,16 +1,18 @@
-// ========================================
 // src/app/core/services/auth.service.ts
-// ========================================
 import { Injectable, inject, signal, computed, effect } from '@angular/core';
-import { Auth, signInWithEmailAndPassword, signOut, onAuthStateChanged, User } from '@angular/fire/auth';
+import { 
+  Auth, 
+  signInWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged, 
+  User,
+  IdTokenResult 
+} from '@angular/fire/auth';
 import { Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, catchError, of, throwError } from 'rxjs';
 
-/**
- * Interface représentant un utilisateur de l'application
- */
 export type AppRole = 'admin' | 'manager' | 'gerante';
 
 export interface AppUser {
@@ -22,8 +24,7 @@ export interface AppUser {
 }
 
 /**
- * Service de gestion de l'authentification Firebase
- * Gère la connexion, déconnexion et l'état de l'utilisateur
+ * Service d'authentification amélioré avec gestion du refresh des tokens
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -31,226 +32,202 @@ export class AuthService {
   private readonly router = inject(Router);
   private readonly http = inject(HttpClient);
   
-  // Signals pour gérer l'état de l'authentification
+  // Signals pour l'état
   private readonly currentUserSignal = signal<User | null>(null);
   private readonly appUserSignal = signal<AppUser | null>(null);
   private readonly loadingSignal = signal(true);
   private readonly errorSignal = signal<string | null>(null);
   private readonly authCheckCompleted = signal(false);
+  private readonly tokenExpirationSignal = signal<Date | null>(null);
   
-  // Track si fetchAppUser est en cours
-  private fetchingAppUser = false;
-  
-  // Dev-only role override (non-production)
+  // Dev mode role override (uniquement en dev)
   private readonly devRoleSignal = signal<AppRole | null>(null);
   
-  // Signals publics en lecture seule
+  // Cache pour éviter les appels API multiples
+  private tokenCache: { token: string; expiration: Date } | null = null;
+  
+  // Signals publics
   readonly currentUser = this.currentUserSignal.asReadonly();
   readonly appUser = this.appUserSignal.asReadonly();
   readonly isAuthenticated = computed(() => !!this.currentUserSignal());
   readonly isLoading = this.loadingSignal.asReadonly();
   readonly error = this.errorSignal.asReadonly();
   readonly authReady = this.authCheckCompleted.asReadonly();
-
-  // Role helpers avec priorité au dev role
+  
+  // Computed role avec support du dev mode
   readonly userRole = computed<AppRole | null>(() => {
-    // En dev, priorité au rôle override
+    // En dev, priorité au role override
     if (!environment.production && this.devRoleSignal()) {
       return this.devRoleSignal();
     }
-    // Sinon utiliser le rôle de l'API
-    return this.appUserSignal()?.role ?? null;
+    return this.appUserSignal()?.role || null;
   });
   
-  // Normalize to permission tiers
-  readonly normalizedRole = computed<'admin' | 'manager' | null>(() => {
+  // Role normalisé pour la compatibilité
+  readonly normalizedRole = computed<AppRole | null>(() => {
     const role = this.userRole();
     if (!role) return null;
     
-    // Map gerante to manager for permissions
-    if (role === 'admin') return 'admin';
-    if (role === 'manager' || role === 'gerante') return 'manager';
-    return null;
+    // Normalisation des variantes de rôles
+    const roleMap: Record<string, AppRole> = {
+      'admin': 'admin',
+      'administrator': 'admin',
+      'manager': 'manager',
+      'gestionnaire': 'manager',
+      'gerante': 'gerante',
+      'gerant': 'gerante'
+    };
+    
+    return roleMap[role.toLowerCase()] || role as AppRole;
   });
   
+  // Helpers pour les permissions
   readonly canManage = computed(() => {
-    const norm = this.normalizedRole();
-    return norm === 'admin' || norm === 'manager';
+    const role = this.normalizedRole();
+    return role === 'admin' || role === 'manager' || role === 'gerante';
   });
-
-  /**
-   * Vérifie si l'utilisateur a un rôle spécifique
-   */
-  hasRole(role: AppRole | 'admin' | 'manager'): boolean {
-    const currentRole = this.userRole();
-    const normalized = this.normalizedRole();
-    
-    // Vérification directe du rôle
-    if (currentRole === role) return true;
-    
-    // Vérification avec normalisation
-    if (role === 'manager' && normalized === 'manager') return true;
-    if (role === 'admin' && normalized === 'admin') return true;
-    if (role === 'gerante' && (currentRole === 'gerante' || normalized === 'manager')) return true;
-    
-    return false;
-  }
-
-  /**
-   * Vérifie si l'utilisateur a au moins un des rôles spécifiés
-   */
-  hasAnyRole(roles: Array<AppRole | 'admin' | 'manager'>): boolean {
-    return roles.some(r => this.hasRole(r));
-  }
+  
+  readonly isAdmin = computed(() => this.normalizedRole() === 'admin');
+  readonly isManager = computed(() => this.normalizedRole() === 'manager');
+  readonly isGerante = computed(() => this.normalizedRole() === 'gerante');
   
   constructor() {
-    // Initialiser l'authentification automatiquement
-    this.initializeAuth();
-    
-    // Charger un éventuel override de rôle en dev
+    console.log('🔐 AuthService initialisé');
+    this.initializeAuthListener();
+    this.setupTokenRefreshMonitor();
+    this.loadDevRole();
+  }
+  
+  /**
+   * Charge le rôle dev depuis localStorage (dev uniquement)
+   */
+  private loadDevRole(): void {
     if (!environment.production) {
-      this.loadDevRoleFromStorage();
-      
-      // Helpers debug accessibles depuis la console
-      (window as any).authDebug = {
-        setRole: (role: AppRole | null) => this.setDevRole(role),
-        getRole: () => this.devRoleSignal(),
-        getCurrentRole: () => this.userRole(),
-        getNormalizedRole: () => this.normalizedRole(),
-        canManage: () => this.canManage(),
-        clearRole: () => this.setDevRole(null),
-        info: () => ({
-          isAuthenticated: this.isAuthenticated(),
-          devRole: this.devRoleSignal(),
-          userRole: this.userRole(),
-          normalizedRole: this.normalizedRole(),
-          canManage: this.canManage(),
-          appUser: this.appUserSignal(),
-          currentUser: this.currentUserSignal()
-        })
-      };
-      
-      console.log('🔧 Debug auth disponible: authDebug.info()');
-    }
-    
-    // Logger les changements de rôle en dev
-    if (!environment.production) {
-      effect(() => {
-        const role = this.userRole();
-        const normalized = this.normalizedRole();
-        if (role || normalized) {
-          console.log('🎭 Role update:', { 
-            userRole: role, 
-            normalized,
-            canManage: this.canManage() 
-          });
-        }
-      });
+      const savedRole = localStorage.getItem('devRole') as AppRole | null;
+      if (savedRole) {
+        this.devRoleSignal.set(savedRole);
+        console.log('🎭 Dev role chargé:', savedRole);
+      }
     }
   }
   
   /**
-   * Charge le rôle dev depuis le localStorage
-   */
-  private loadDevRoleFromStorage(): void {
-    if (environment.production) return;
-    
-    try {
-      const storedRole = localStorage.getItem('devRole');
-      if (storedRole === 'admin' || storedRole === 'manager' || storedRole === 'gerante') {
-        this.devRoleSignal.set(storedRole as AppRole);
-        console.log('🎭 Dev role loaded:', storedRole);
-      }
-    } catch (error) {
-      console.error('Error loading dev role:', error);
-    }
-  }
-
-  /**
-   * Définit un rôle de développement (dev uniquement)
+   * Définit le rôle en mode dev (dev uniquement)
    */
   setDevRole(role: AppRole | null): void {
     if (environment.production) {
-      console.warn('Dev role override is disabled in production');
+      console.warn('setDevRole n\'est pas disponible en production');
       return;
     }
     
-    try {
-      if (role) {
-        localStorage.setItem('devRole', role);
-        console.log('🎭 Dev role set:', role);
-      } else {
-        localStorage.removeItem('devRole');
-        console.log('🎭 Dev role cleared');
-      }
-      this.devRoleSignal.set(role);
-    } catch (error) {
-      console.error('Error setting dev role:', error);
+    this.devRoleSignal.set(role);
+    
+    if (role) {
+      localStorage.setItem('devRole', role);
+      console.log('🎭 Dev role défini:', role);
+    } else {
+      localStorage.removeItem('devRole');
+      console.log('🎭 Dev role supprimé');
     }
   }
   
   /**
-   * Initialise l'écouteur d'état Firebase Auth
-   * CORRIGÉ : Pas de redirection automatique qui interfère
+   * Vérifie si l'utilisateur a un rôle spécifique
    */
-  private initializeAuth(): void {
-    console.log('🔐 Initialisation de l\'authentification...');
-    
+  hasRole(role: AppRole): boolean {
+    return this.normalizedRole() === role;
+  }
+  
+  /**
+   * Initialise l'écoute des changements d'état d'authentification
+   */
+  private initializeAuthListener(): void {
     onAuthStateChanged(this.auth, async (user) => {
-      console.log('🔄 État auth changé:', user?.email || 'non connecté');
+      console.log('👤 État auth changé:', user ? 'Connecté' : 'Déconnecté');
       
       this.currentUserSignal.set(user);
+      this.loadingSignal.set(false);
       
       if (user) {
-        // Utilisateur connecté - récupérer les données
+        // Récupérer les infos du token
+        const tokenResult = await user.getIdTokenResult();
+        this.tokenExpirationSignal.set(new Date(tokenResult.expirationTime));
+        
+        console.log('🕐 Token expire à:', tokenResult.expirationTime);
+        
+        // Récupérer le profil utilisateur depuis l'API
         await this.fetchAppUser();
-        
-        // NE PAS rediriger automatiquement ici
-        // Laisser les guards gérer la navigation
       } else {
-        // Utilisateur déconnecté
         this.appUserSignal.set(null);
-        this.devRoleSignal.set(null); // Clear dev role on logout
-        
-        // NE PAS rediriger automatiquement
-        // Les guards s'en chargeront
+        this.tokenCache = null;
+        this.tokenExpirationSignal.set(null);
       }
       
-      this.loadingSignal.set(false);
       this.authCheckCompleted.set(true);
+    });
+  }
+  
+  /**
+   * Configure un moniteur pour rafraîchir le token avant expiration
+   */
+  private setupTokenRefreshMonitor(): void {
+    effect(() => {
+      const expiration = this.tokenExpirationSignal();
+      const user = this.currentUserSignal();
       
-      console.log('✅ Auth check completed:', {
-        isAuthenticated: !!user,
-        hasAppUser: !!this.appUserSignal(),
-        userRole: this.userRole()
-      });
+      if (!expiration || !user) return;
+      
+      // Rafraîchir 5 minutes avant l'expiration
+      const refreshTime = expiration.getTime() - Date.now() - (5 * 60 * 1000);
+      
+      if (refreshTime > 0) {
+        console.log(`⏰ Refresh du token prévu dans ${Math.round(refreshTime / 1000 / 60)} minutes`);
+        
+        setTimeout(async () => {
+          console.log('🔄 Refresh automatique du token...');
+          await this.refreshToken();
+        }, refreshTime);
+      }
     });
   }
   
   /**
    * Connexion avec email et mot de passe
+   * Alias pour signInWithEmail pour la compatibilité
    */
   async signIn(email: string, password: string): Promise<void> {
-    console.log('🔑 Tentative de connexion pour:', email);
-    
+    return this.signInWithEmail(email, password);
+  }
+  
+  /**
+   * Connexion avec email et mot de passe
+   */
+  async signInWithEmail(email: string, password: string): Promise<void> {
+    console.log('🔑 Tentative de connexion:', email);
     this.loadingSignal.set(true);
     this.errorSignal.set(null);
     
     try {
-      const credential = await signInWithEmailAndPassword(this.auth, email, password);
-      console.log('✅ Connexion réussie:', credential.user.email);
+      const userCredential = await signInWithEmailAndPassword(
+        this.auth, 
+        email, 
+        password
+      );
       
-      this.currentUserSignal.set(credential.user);
+      console.log('✅ Connexion Firebase réussie');
       
-  // Récupérer les données utilisateur depuis l'API
-  // et attendre que ce soit terminé
-  await this.fetchAppUser();
+      // Forcer le refresh du token pour avoir un token frais
+      await userCredential.user.getIdToken(true);
       
-  // Ne pas naviguer ici; laisser le composant de login gérer la redirection
-  console.log('✅ Connexion prête, redirection gérée par le composant');
+      // Récupérer le profil utilisateur
+      await this.fetchAppUser();
+      
+      console.log('✅ Profil utilisateur chargé');
+      await this.router.navigate(['/dashboard']);
+      
     } catch (error: any) {
       console.error('❌ Erreur de connexion:', error);
-      const errorMessage = this.getErrorMessage(error.code);
+      const errorMessage = this.getFirebaseErrorMessage(error.code);
       this.errorSignal.set(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -259,15 +236,143 @@ export class AuthService {
   }
   
   /**
-   * Déconnexion de l'utilisateur
+   * Récupère le profil utilisateur depuis l'API backend
+   */
+  private async fetchAppUser(): Promise<void> {
+    try {
+      console.log('📥 Récupération du profil utilisateur...');
+      
+      // Attendre que le token soit disponible
+      const token = await this.getIdToken(true);
+      if (!token) {
+        throw new Error('Pas de token disponible');
+      }
+      
+      const response = await firstValueFrom(
+        this.http.get<AppUser>(`${environment.apiUrl}/users/me`).pipe(
+          catchError((error: HttpErrorResponse) => {
+            console.error('❌ Erreur API:', error);
+            
+            // Si 404, l'utilisateur n'existe pas encore côté backend
+            if (error.status === 404) {
+              return this.createUserProfile();
+            }
+            
+            return throwError(() => error);
+          })
+        )
+      );
+      
+      if (response) {
+        this.appUserSignal.set(response as AppUser);
+        console.log('✅ Profil récupéré:', (response as AppUser).full_name, 'Role:', (response as AppUser).role);
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur récupération profil:', error);
+      
+      // En dev, créer un mock user si l'API est down
+      if (!environment.production && this.currentUserSignal()) {
+        const mockUser: AppUser = {
+          id: 'mock-id',
+          firebase_uid: this.currentUserSignal()!.uid,
+          full_name: this.currentUserSignal()!.email?.split('@')[0] || 'Dev User',
+          role: 'gerante',
+          created_at: new Date().toISOString()
+        };
+        
+        this.appUserSignal.set(mockUser);
+        console.log('🎭 Mock user créé pour le dev:', mockUser);
+      }
+    }
+  }
+  
+  /**
+   * Crée le profil utilisateur côté backend lors de la première connexion
+   */
+  private async createUserProfile() {
+    const user = this.currentUserSignal();
+    if (!user) return of(null);
+    
+    console.log('🆕 Création du profil utilisateur côté backend...');
+    
+    const token = await user.getIdToken();
+    
+    return this.http.post<AppUser>(`${environment.apiUrl}/auth/login`, {
+      id_token: token
+    });
+  }
+  
+  /**
+   * Récupère le token Firebase avec gestion du cache
+   * @param forceRefresh Force le refresh du token même s'il n'est pas expiré
+   */
+  async getIdToken(forceRefresh = false): Promise<string | null> {
+    const user = this.currentUserSignal();
+    if (!user) {
+      console.warn('⚠️ Pas d\'utilisateur connecté');
+      return null;
+    }
+    
+    try {
+      // Vérifier le cache si pas de force refresh
+      if (!forceRefresh && this.tokenCache) {
+        const now = new Date();
+        // Utiliser le cache si le token expire dans plus de 5 minutes
+        if (this.tokenCache.expiration > new Date(now.getTime() + 5 * 60 * 1000)) {
+          console.log('📦 Utilisation du token en cache');
+          return this.tokenCache.token;
+        }
+      }
+      
+      console.log('🔄 Récupération du token Firebase...');
+      const token = await user.getIdToken(forceRefresh);
+      const tokenResult = await user.getIdTokenResult();
+      
+      // Mettre à jour le cache
+      this.tokenCache = {
+        token,
+        expiration: new Date(tokenResult.expirationTime)
+      };
+      
+      this.tokenExpirationSignal.set(this.tokenCache.expiration);
+      console.log('✅ Token récupéré, expire à:', tokenResult.expirationTime);
+      
+      return token;
+    } catch (error) {
+      console.error('❌ Erreur récupération token:', error);
+      this.tokenCache = null;
+      return null;
+    }
+  }
+  
+  /**
+   * Force le refresh du token
+   */
+  async refreshToken(): Promise<string | null> {
+    console.log('🔄 Refresh forcé du token...');
+    return this.getIdToken(true);
+  }
+  
+  /**
+   * Déconnexion
+   * Alias pour signOut pour la compatibilité
    */
   async signOutUser(): Promise<void> {
+    return this.signOut();
+  }
+  
+  /**
+   * Déconnexion
+   */
+  async signOut(): Promise<void> {
     console.log('🚪 Déconnexion...');
     
     try {
       await signOut(this.auth);
       this.currentUserSignal.set(null);
       this.appUserSignal.set(null);
+      this.tokenCache = null;
+      this.tokenExpirationSignal.set(null);
       
       // Clear dev role on logout
       if (!environment.production) {
@@ -284,28 +389,13 @@ export class AuthService {
   }
   
   /**
-   * Récupère le token Firebase pour les appels API
-   */
-  async getIdToken(): Promise<string | null> {
-    const user = this.currentUserSignal();
-    if (!user) return null;
-    
-    try {
-      return await user.getIdToken();
-    } catch (error) {
-      console.error('Erreur récupération token:', error);
-      return null;
-    }
-  }
-  
-  /**
-   * Attendre que la vérification d'authentification soit terminée
-   * CORRIGÉ : Attend aussi que fetchAppUser soit terminé
+   * Vérifie si l'authentification est prête
    */
   async waitForAuthCheck(): Promise<boolean> {
-    console.log('⏳ Waiting for auth check...');
+    if (this.authCheckCompleted()) {
+      return this.isAuthenticated();
+    }
     
-    // Attendre que Firebase ait vérifié l'état
     const maxWait = 5000;
     const checkInterval = 100;
     let waited = 0;
@@ -315,95 +405,13 @@ export class AuthService {
       waited += checkInterval;
     }
     
-    // Si un utilisateur est connecté, attendre aussi fetchAppUser
-    if (this.currentUserSignal() && this.fetchingAppUser) {
-      console.log('⏳ Waiting for app user fetch...');
-      let waitedForUser = 0;
-      
-      while (this.fetchingAppUser && waitedForUser < maxWait) {
-        await new Promise(resolve => setTimeout(resolve, checkInterval));
-        waitedForUser += checkInterval;
-      }
-    }
-    
-    const isAuth = this.isAuthenticated();
-    console.log('✅ Auth check complete:', {
-      isAuthenticated: isAuth,
-      hasAppUser: !!this.appUserSignal(),
-      userRole: this.userRole()
-    });
-    
-    return isAuth;
-  }
-  
-  /**
-   * Récupère les données utilisateur depuis l'API backend
-   * CORRIGÉ : Meilleure gestion des erreurs et du statut
-   */
-  private async fetchAppUser(): Promise<void> {
-    if (this.fetchingAppUser) {
-      console.log('⚠️ fetchAppUser already in progress, skipping...');
-      return;
-    }
-    
-    this.fetchingAppUser = true;
-    
-    try {
-      console.log('📥 Récupération du profil utilisateur...');
-      
-      const token = await this.getIdToken();
-      if (!token) {
-        console.error('❌ Pas de token Firebase disponible');
-        return;
-      }
-      
-      // Appel API avec timeout
-      const response = await Promise.race([
-        firstValueFrom(
-          this.http.get<AppUser>(`${environment.apiUrl}/users/me`)
-        ),
-        new Promise<null>((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 20000)
-        )
-      ]);
-      
-      if (response) {
-        this.appUserSignal.set(response as AppUser);
-        console.log('✅ Profil récupéré:', (response as AppUser).full_name, 'Role:', (response as AppUser).role);
-      } else {
-        throw new Error('Response vide');
-      }
-    } catch (error: any) {
-      console.error('⚠️ Erreur récupération profil:', error);
-      
-      // En dev uniquement : créer un utilisateur mock si l'API est down
-      if (!environment.production && this.currentUserSignal()) {
-        const mockRole = this.devRoleSignal() || 'gerante';
-        const mockUser: AppUser = {
-          id: 'mock-' + Date.now(),
-          firebase_uid: this.currentUserSignal()!.uid,
-          full_name: this.currentUserSignal()!.email?.split('@')[0] || 'Dev User',
-          role: mockRole,
-          created_at: new Date().toISOString()
-        };
-        
-        this.appUserSignal.set(mockUser);
-        console.log('🎭 Mock user created for dev:', mockUser);
-        console.log('💡 Pour changer le rôle: authDebug.setRole("admin" | "manager" | "gerante")');
-      } else {
-        // En production, on ne peut pas continuer sans les données utilisateur
-        console.error('❌ Impossible de récupérer le profil utilisateur');
-        // Ne pas déconnecter automatiquement, laisser l'utilisateur réessayer
-      }
-    } finally {
-      this.fetchingAppUser = false;
-    }
+    return this.isAuthenticated();
   }
   
   /**
    * Traduit les codes d'erreur Firebase
    */
-  private getErrorMessage(code: string): string {
+  private getFirebaseErrorMessage(code: string): string {
     const messages: Record<string, string> = {
       'auth/invalid-email': 'Email invalide',
       'auth/user-disabled': 'Compte désactivé',
@@ -415,6 +423,6 @@ export class AuthService {
       'auth/invalid-login-credentials': 'Email ou mot de passe incorrect'
     };
     
-    return messages[code] || 'Une erreur est survenue lors de la connexion';
+    return messages[code] || 'Une erreur est survenue';
   }
 }
