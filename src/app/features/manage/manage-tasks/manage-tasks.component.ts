@@ -23,6 +23,8 @@ export class ManageTasksComponent implements OnInit {
     default_performer_id: '',
     frequency_days: 1
   };
+  editingTaskId: string | null = null;
+  editDraft: any = {};
   
   ngOnInit() {
     this.loadData();
@@ -38,11 +40,20 @@ export class ManageTasksComponent implements OnInit {
   
   async saveNewTask() {
     if (!this.isNewTaskValid()) return;
-    
-    // TODO: Implémenter la création via l'API
-    console.log('Saving new task:', this.newTask);
-    
-    // Reset form
+    // Create a task template then assign it
+    const template = await this.taskService.createTaskTemplate({
+      name: this.newTask.name,
+      description: this.newTask.description,
+      is_active: true
+    });
+    await this.taskService.assignTask({
+      task_template_id: template.id,
+      room_id: this.newTask.room_id,
+      default_performer_id: this.newTask.default_performer_id,
+      frequency_days: this.newTask.frequency_days ?? 1,
+      is_active: true
+    });
+    await this.taskService.loadAllData();
     this.cancelAdd();
   }
   
@@ -58,14 +69,33 @@ export class ManageTasksComponent implements OnInit {
   }
   
   editTask(task: any) {
-    console.log('Edit task:', task);
-    // TODO: Implémenter l'édition
+    this.editingTaskId = task.id;
+    this.editDraft = {
+      frequency_days: task.frequency_days,
+      times_per_day: task.times_per_day,
+      suggested_time: task.suggested_time,
+      is_active: task.is_active,
+      room_id: task.room.id,
+      default_performer_id: task.default_performer.id
+    };
   }
   
-  deleteTask(task: any) {
-    if (confirm(`Supprimer la tâche "${task.task_template.name}" ?`)) {
-      console.log('Delete task:', task);
-      // TODO: Implémenter la suppression
-    }
+  async deleteTask(task: any) {
+    if (!confirm(`Supprimer la tâche "${task.task_template.name}" ?`)) return;
+    await this.taskService.deleteAssignedTask(task.id);
+    await this.taskService.loadAllData();
+  }
+
+  async saveEdit(task: any) {
+    if (!this.editingTaskId) return;
+    await this.taskService.updateAssignedTask(this.editingTaskId, this.editDraft);
+    this.editingTaskId = null;
+    this.editDraft = {};
+    await this.taskService.loadAllData();
+  }
+
+  cancelEdit() {
+    this.editingTaskId = null;
+    this.editDraft = {};
   }
 }

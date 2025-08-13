@@ -23,6 +23,8 @@ export class ManageRoomsComponent implements OnInit {
   };
   
   sortedRooms = signal<any[]>([]);
+  editingRoomId: string | null = null;
+  editDraft: any = {};
   
   ngOnInit() {
     this.loadData();
@@ -41,11 +43,11 @@ export class ManageRoomsComponent implements OnInit {
   
   async saveNewRoom() {
     if (!this.newRoom.name) return;
-    
-    // TODO: Implémenter la création via l'API
-    console.log('Saving new room:', this.newRoom);
-    
-    // Reset form
+    // ensure display order is last
+    const nextOrder = this.taskService.rooms().length;
+    const payload = { ...this.newRoom, display_order: nextOrder };
+    const created = await this.taskService.createRoom(payload);
+    this.updateSortedRooms();
     this.cancelAdd();
   }
   
@@ -59,19 +61,44 @@ export class ManageRoomsComponent implements OnInit {
   }
   
   editRoom(room: any) {
-    console.log('Edit room:', room);
-    // TODO: Implémenter l'édition
+    this.editingRoomId = room.id;
+    this.editDraft = { name: room.name, description: room.description, display_order: room.display_order, is_active: room.is_active };
   }
   
-  deleteRoom(room: any) {
-    if (confirm(`Supprimer la pièce "${room.name}" ?`)) {
-      console.log('Delete room:', room);
-      // TODO: Implémenter la suppression
-    }
+  async deleteRoom(room: any) {
+    if (!confirm(`Supprimer la pièce "${room.name}" ?`)) return;
+    await this.taskService.deleteRoom(room.id);
+    this.updateSortedRooms();
   }
   
-  moveRoom(room: any, direction: number) {
-    console.log('Move room:', room, direction);
-    // TODO: Implémenter le changement d'ordre
+  async moveRoom(room: any, direction: number) {
+    const rooms = this.sortedRooms();
+    const idx = rooms.findIndex(r => r.id === room.id);
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= rooms.length) return;
+    // swap display_order values
+    const a = rooms[idx];
+    const b = rooms[targetIdx];
+    const tmp = a.display_order;
+    a.display_order = b.display_order;
+    b.display_order = tmp;
+    // persist both updates sequentially
+    await this.taskService.updateRoom(a.id, { display_order: a.display_order });
+    await this.taskService.updateRoom(b.id, { display_order: b.display_order });
+    await this.taskService.loadAllData();
+    this.updateSortedRooms();
+  }
+
+  async saveEdit(room: any) {
+    if (!this.editingRoomId) return;
+    const updated = await this.taskService.updateRoom(this.editingRoomId, this.editDraft);
+    this.editingRoomId = null;
+    this.editDraft = {};
+    this.updateSortedRooms();
+  }
+
+  cancelEdit() {
+    this.editingRoomId = null;
+    this.editDraft = {};
   }
 }

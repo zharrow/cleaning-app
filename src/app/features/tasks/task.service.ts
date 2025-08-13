@@ -97,7 +97,16 @@ export class TaskService {
     return newTask;
   }
   
-  async assignTask(assignment: Partial<AssignedTask>): Promise<AssignedTask> {
+  // Create an assigned task by linking an existing template to a room/performer
+  async assignTask(assignment: {
+    task_template_id: string;
+    room_id: string;
+    default_performer_id: string;
+    frequency_days?: number;
+    times_per_day?: number;
+    suggested_time?: string;
+    is_active?: boolean;
+  }): Promise<AssignedTask> {
     const newAssignment = await firstValueFrom(
       this.api.post<AssignedTask>('assigned-tasks', assignment)
     );
@@ -122,5 +131,51 @@ export class TaskService {
     
     this.performers.update(performers => [...performers, newPerformer]);
     return newPerformer;
+  }
+
+  // Update methods
+  async updateRoom(roomId: string, updates: Partial<Room>): Promise<Room> {
+    const updated = await firstValueFrom(
+      this.api.put<Room>(`rooms/${roomId}`, updates)
+    );
+    this.rooms.update(list => list.map(r => (r.id === updated.id ? updated : r)));
+    return updated;
+  }
+
+  async deleteRoom(roomId: string): Promise<void> {
+    await firstValueFrom(this.api.delete<void>(`rooms/${roomId}`));
+    this.rooms.update(list => list.filter(r => r.id !== roomId));
+    // Optionally refresh assigned tasks if backend cascades; keeping it simple here
+  }
+
+  async updateTaskTemplate(id: string, updates: Partial<TaskTemplate>): Promise<TaskTemplate> {
+    const updated = await firstValueFrom(
+      this.api.put<TaskTemplate>(`task-templates/${id}`, updates)
+    );
+    this.taskTemplates.update(list => list.map(t => (t.id === updated.id ? updated : t)));
+    return updated;
+  }
+
+  async deleteTaskTemplate(id: string): Promise<void> {
+    await firstValueFrom(this.api.delete<void>(`task-templates/${id}`));
+    this.taskTemplates.update(list => list.filter(t => t.id !== id));
+  }
+
+  async updateAssignedTask(id: string, updates: Partial<AssignedTask> & {
+    // Allow id-based updates too
+    task_template_id?: string;
+    room_id?: string;
+    default_performer_id?: string;
+  }): Promise<AssignedTask> {
+    const updated = await firstValueFrom(
+      this.api.put<AssignedTask>(`assigned-tasks/${id}`, updates)
+    );
+    this.assignedTasks.update(list => list.map(a => (a.id === updated.id ? updated : a)));
+    return updated;
+  }
+
+  async deleteAssignedTask(id: string): Promise<void> {
+    await firstValueFrom(this.api.delete<void>(`assigned-tasks/${id}`));
+    this.assignedTasks.update(list => list.filter(a => a.id !== id));
   }
 }
