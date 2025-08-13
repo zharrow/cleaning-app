@@ -38,6 +38,9 @@ export class AuthService {
   private readonly errorSignal = signal<string | null>(null);
   private readonly authCheckCompleted = signal(false);
   
+  // Track si fetchAppUser est en cours
+  private fetchingAppUser = false;
+  
   // Dev-only role override (non-production)
   private readonly devRoleSignal = signal<AppRole | null>(null);
   
@@ -122,7 +125,8 @@ export class AuthService {
           userRole: this.userRole(),
           normalizedRole: this.normalizedRole(),
           canManage: this.canManage(),
-          appUser: this.appUserSignal()
+          appUser: this.appUserSignal(),
+          currentUser: this.currentUserSignal()
         })
       };
       
@@ -187,6 +191,7 @@ export class AuthService {
   
   /**
    * Initialise l'écouteur d'état Firebase Auth
+   * CORRIGÉ : Pas de redirection automatique qui interfère
    */
   private initializeAuth(): void {
     console.log('🔐 Initialisation de l\'authentification...');
@@ -200,25 +205,25 @@ export class AuthService {
         // Utilisateur connecté - récupérer les données
         await this.fetchAppUser();
         
-        // Rediriger vers dashboard si on est sur login
-        if (window.location.pathname === '/login') {
-          console.log('➡️ Redirection vers dashboard');
-          this.router.navigate(['/dashboard']);
-        }
+        // NE PAS rediriger automatiquement ici
+        // Laisser les guards gérer la navigation
       } else {
         // Utilisateur déconnecté
         this.appUserSignal.set(null);
         this.devRoleSignal.set(null); // Clear dev role on logout
         
-        // Rediriger vers login si nécessaire
-        if (window.location.pathname !== '/login') {
-          console.log('➡️ Redirection vers login');
-          this.router.navigate(['/login']);
-        }
+        // NE PAS rediriger automatiquement
+        // Les guards s'en chargeront
       }
       
       this.loadingSignal.set(false);
       this.authCheckCompleted.set(true);
+      
+      console.log('✅ Auth check completed:', {
+        isAuthenticated: !!user,
+        hasAppUser: !!this.appUserSignal(),
+        userRole: this.userRole()
+      });
     });
   }
   
@@ -237,12 +242,12 @@ export class AuthService {
       
       this.currentUserSignal.set(credential.user);
       
-      // Récupérer les données utilisateur depuis l'API
-      await this.fetchAppUser();
+  // Récupérer les données utilisateur depuis l'API
+  // et attendre que ce soit terminé
+  await this.fetchAppUser();
       
-      // Navigation vers dashboard
-      console.log('➡️ Navigation vers dashboard...');
-      await this.router.navigate(['/dashboard']);
+  // Ne pas naviguer ici; laisser le composant de login gérer la redirection
+  console.log('✅ Connexion prête, redirection gérée par le composant');
     } catch (error: any) {
       console.error('❌ Erreur de connexion:', error);
       const errorMessage = this.getErrorMessage(error.code);
@@ -295,14 +300,12 @@ export class AuthService {
   
   /**
    * Attendre que la vérification d'authentification soit terminée
+   * CORRIGÉ : Attend aussi que fetchAppUser soit terminé
    */
   async waitForAuthCheck(): Promise<boolean> {
-    // Si déjà vérifié, retourner immédiatement
-    if (this.authCheckCompleted()) {
-      return this.isAuthenticated();
-    }
+    console.log('⏳ Waiting for auth check...');
     
-    // Attendre que la vérification soit terminée (max 5 secondes)
+    // Attendre que Firebase ait vérifié l'état
     const maxWait = 5000;
     const checkInterval = 100;
     let waited = 0;
@@ -312,40 +315,88 @@ export class AuthService {
       waited += checkInterval;
     }
     
-    return this.isAuthenticated();
+    // Si un utilisateur est connecté, attendre aussi fetchAppUser
+    if (this.currentUserSignal() && this.fetchingAppUser) {
+      console.log('⏳ Waiting for app user fetch...');
+      let waitedForUser = 0;
+      
+      while (this.fetchingAppUser && waitedForUser < maxWait) {
+        await new Promise(resolve => setTimeout(resolve, checkInterval));
+        waitedForUser += checkInterval;
+      }
+    }
+    
+    const isAuth = this.isAuthenticated();
+    console.log('✅ Auth check complete:', {
+      isAuthenticated: isAuth,
+      hasAppUser: !!this.appUserSignal(),
+      userRole: this.userRole()
+    });
+    
+    return isAuth;
   }
   
   /**
    * Récupère les données utilisateur depuis l'API backend
+   * CORRIGÉ : Meilleure gestion des erreurs et du statut
    */
   private async fetchAppUser(): Promise<void> {
+    if (this.fetchingAppUser) {
+      console.log('⚠️ fetchAppUser already in progress, skipping...');
+      return;
+    }
+    
+    this.fetchingAppUser = true;
+    
     try {
       console.log('📥 Récupération du profil utilisateur...');
       
-      const response = await firstValueFrom(
-        this.http.get<AppUser>(`${environment.apiUrl}/users/me`)
-      );
+      const token = await this.getIdToken();
+      if (!token) {
+        console.error('❌ Pas de token Firebase disponible');
+        return;
+      }
+      
+      // Appel API avec timeout
+      const response = await Promise.race([
+        firstValueFrom(
+          this.http.get<AppUser>(`${environment.apiUrl}/users/me`)
+        ),
+        new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 20000)
+        )
+      ]);
       
       if (response) {
-        this.appUserSignal.set(response);
-        console.log('✅ Profil récupéré:', response.full_name, 'Role:', response.role);
+        this.appUserSignal.set(response as AppUser);
+        console.log('✅ Profil récupéré:', (response as AppUser).full_name, 'Role:', (response as AppUser).role);
+      } else {
+        throw new Error('Response vide');
       }
-    } catch (error) {
-      console.error('⚠️ Erreur récupération profil (API peut-être indisponible):', error);
+    } catch (error: any) {
+      console.error('⚠️ Erreur récupération profil:', error);
       
-      // En dev, on peut créer un utilisateur fictif si l'API est down
+      // En dev uniquement : créer un utilisateur mock si l'API est down
       if (!environment.production && this.currentUserSignal()) {
+        const mockRole = this.devRoleSignal() || 'gerante';
         const mockUser: AppUser = {
-          id: 'mock-id',
+          id: 'mock-' + Date.now(),
           firebase_uid: this.currentUserSignal()!.uid,
           full_name: this.currentUserSignal()!.email?.split('@')[0] || 'Dev User',
-          role: this.devRoleSignal() || 'gerante',
+          role: mockRole,
           created_at: new Date().toISOString()
         };
         
         this.appUserSignal.set(mockUser);
         console.log('🎭 Mock user created for dev:', mockUser);
+        console.log('💡 Pour changer le rôle: authDebug.setRole("admin" | "manager" | "gerante")');
+      } else {
+        // En production, on ne peut pas continuer sans les données utilisateur
+        console.error('❌ Impossible de récupérer le profil utilisateur');
+        // Ne pas déconnecter automatiquement, laisser l'utilisateur réessayer
       }
+    } finally {
+      this.fetchingAppUser = false;
     }
   }
   

@@ -51,6 +51,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/profile/profile.component').then(m => m.ProfileComponent),
     canActivate: [authGuard]
   },
+  {
+    path: 'auth-diagnostic',
+    loadComponent: () => import('./features/auth/auth-diagnostic/auth-diagnostic.component').then(m => m.AuthDiagnosticComponent),
+    canActivate: [authGuard] // Nécessite juste d'être connecté
+  },
   
   // Routes de redirection
   {
