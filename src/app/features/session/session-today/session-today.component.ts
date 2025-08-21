@@ -1,289 +1,967 @@
-
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+// ========================================
+// Composant Session du jour Angular 19
+// src/app/features/session/session-today/session-today.component.ts
+// ========================================
+import { Component, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { NavbarComponent } from '../../../shared/components/navbar/navbar.component';
-import { SessionService, CleaningLog } from '../session.service';
-import { TaskService } from '../../tasks/task.service';
-import { LucideAngularModule } from 'lucide-angular';
+import { RouterLink } from '@angular/router';
+import { ApiService, type CleaningLog, type CleaningSession } from '../../../core/services/api.service';
+import { AuthService } from '../../../core/services/auth.service';
 
+/**
+ * Interface pour les groupes de tâches par pièce
+ */
+interface RoomTaskGroup {
+  readonly roomId: string;
+  readonly roomName: string;
+  readonly tasks: CleaningLog[];
+  readonly progress: {
+    readonly completed: number;
+    readonly total: number;
+    readonly percentage: number;
+  };
+}
+
+/**
+ * Interface pour les filtres
+ */
+interface TaskFilters {
+  readonly status: 'all' | 'todo' | 'in_progress' | 'done' | 'blocked';
+  readonly room: string;
+  readonly performer: string;
+}
+
+/**
+ * Interface pour le modal de validation de tâche
+ */
+interface TaskValidationModal {
+  readonly isOpen: boolean;
+  readonly task: CleaningLog | null;
+  readonly status: CleaningLog['status'];
+  readonly performer: string;
+  readonly notes: string;
+  readonly photos: File[];
+}
+
+/**
+ * Composant Session du jour
+ * Gère l'affichage et la validation des tâches quotidiennes
+ */
 @Component({
   selector: 'app-session-today',
   standalone: true,
-  imports: [CommonModule, FormsModule, NavbarComponent, LucideAngularModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <div class="min-h-screen bg-gray-50">
-      <app-navbar></app-navbar>
+    <div class="page-container">
       
-      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Header -->
-        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div class="flex items-center justify-between">
+      <!-- En-tête de session -->
+      @if (currentSession(); as session) {
+        <div class="page-header">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h1 class="text-2xl font-bold text-gray-900">Session de nettoyage</h1>
-              <p class="text-gray-600 mt-1">{{ todayDate }}</p>
+              <h1 class="page-title">
+                Session du {{ formatDate(session.date) }}
+              </h1>
+              <p class="page-subtitle">
+                {{ getSessionDescription(session) }}
+              </p>
             </div>
-            <div class="flex items-center gap-4">
-              <span [class]="getStatusBadgeClass()" class="px-3 py-1 rounded-full text-sm font-medium">
-                {{ getStatusText() }}
-              </span>
-              <button
-                (click)="completeSession()"
-                [disabled]="!canCompleteSession()"
-                class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            
+            <!-- Actions de session -->
+            <div class="flex items-center gap-3">
+              <div 
+                class="badge"
+                [class]="getSessionStatusClass(session.status)"
               >
-                Terminer la session
-              </button>
+                {{ getSessionStatusLabel(session.status) }}
+              </div>
+              
+              @if (canCompleteSession()) {
+                <button 
+                  class="btn btn-success"
+                  (click)="completeSession()"
+                  [disabled]="completingSession()"
+                >
+                  @if (completingSession()) {
+                    <div class="spinner spinner-sm"></div>
+                  } @else {
+                    <span class="text-lg">✅</span>
+                  }
+                  Terminer la session
+                </button>
+              }
+              
+              @if (canExportSession()) {
+                <button 
+                  class="btn btn-primary"
+                  (click)="exportSession()"
+                  [disabled]="exportingSession()"
+                >
+                  @if (exportingSession()) {
+                    <div class="spinner spinner-sm"></div>
+                  } @else {
+                    <span class="text-lg">📄</span>
+                  }
+                  Exporter PDF
+                </button>
+              }
             </div>
           </div>
         </div>
-
-        <!-- Progression -->
-        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-sm font-medium text-gray-700">Progression</span>
-            <span class="text-sm text-gray-600">
-              {{ completedCount() }} / {{ totalTasks() }} tâches
-            </span>
-          </div>
-          <div class="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              [style.width.%]="progressPercentage()"
-              class="bg-primary-600 h-2 rounded-full transition-all duration-500"
-            ></div>
+      } @else if (!isLoading()) {
+        <!-- Aucune session active -->
+        <div class="page-header">
+          <div class="text-center">
+            <h1 class="page-title">Aucune session active</h1>
+            <p class="page-subtitle mb-6">
+              Commencez une nouvelle session pour aujourd'hui
+            </p>
+            <button 
+              class="btn btn-primary"
+              (click)="startNewSession()"
+              [disabled]="startingSession()"
+            >
+              @if (startingSession()) {
+                <div class="spinner spinner-sm"></div>
+              } @else {
+                <span class="text-lg">🚀</span>
+              }
+              Démarrer une session
+            </button>
           </div>
         </div>
+      }
 
-        <!-- Liste des tâches par pièce -->
+      <!-- Progression globale -->
+      @if (globalProgress(); as progress) {
+        <div class="card mb-8">
+          <div class="card-body">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-semibold text-gray-900">
+                Progression globale
+              </h2>
+              <span class="text-lg font-bold text-primary-600">
+                {{ progress.percentage | number:'1.0-0' }}%
+              </span>
+            </div>
+            
+            <!-- Barre de progression -->
+            <div class="w-full bg-gray-200 rounded-full h-4 mb-4 progress-bar">
+              <div 
+                class="bg-gradient-to-r from-primary-500 to-primary-600 h-4 rounded-full transition-all duration-500 ease-out"
+                [style.width.%]="progress.percentage"
+              ></div>
+            </div>
+            
+            <!-- Statistiques détaillées -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              @for (stat of progressStats(); track stat.label) {
+                <div class="text-center">
+                  <div 
+                    class="w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-semibold"
+                    [style.background-color]="stat.color"
+                  >
+                    {{ stat.count }}
+                  </div>
+                  <p class="text-sm text-gray-600">{{ stat.label }}</p>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Filtres -->
+      @if (allTasks().length > 0) {
+        <div class="card mb-6">
+          <div class="card-body">
+            <div class="flex flex-col md:flex-row gap-4">
+              <!-- Filtre par statut -->
+              <div class="flex-1">
+                <label class="form-label text-sm">Statut</label>
+                <select 
+                  class="form-input form-select"
+                  [(ngModel)]="filters.status"
+                  (ngModelChange)="updateFilters()"
+                >
+                  <option value="all">Tous les statuts</option>
+                  <option value="todo">À faire</option>
+                  <option value="in_progress">En cours</option>
+                  <option value="done">Terminé</option>
+                  <option value="blocked">Bloqué</option>
+                </select>
+              </div>
+              
+              <!-- Filtre par pièce -->
+              <div class="flex-1">
+                <label class="form-label text-sm">Pièce</label>
+                <select 
+                  class="form-input form-select"
+                  [(ngModel)]="filters.room"
+                  (ngModelChange)="updateFilters()"
+                >
+                  <option value="">Toutes les pièces</option>
+                  @for (room of availableRooms(); track room.id) {
+                    <option [value]="room.id">{{ room.name }}</option>
+                  }
+                </select>
+              </div>
+              
+              <!-- Filtre par exécutant -->
+              <div class="flex-1">
+                <label class="form-label text-sm">Exécutant</label>
+                <select 
+                  class="form-input form-select"
+                  [(ngModel)]="filters.performer"
+                  (ngModelChange)="updateFilters()"
+                >
+                  <option value="">Tous les exécutants</option>
+                  @for (performer of availablePerformers(); track performer) {
+                    <option [value]="performer">{{ performer }}</option>
+                  }
+                </select>
+              </div>
+              
+              <!-- Bouton reset -->
+              <div class="flex items-end">
+                <button 
+                  class="btn btn-secondary"
+                  (click)="resetFilters()"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Liste des tâches groupées par pièce -->
+      @if (isLoading()) {
         <div class="space-y-6">
-          @for (room of taskService.rooms(); track room.id) {
-            @if (getTasksForRoom(room.id).length > 0) {
-              <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div class="bg-gray-50 px-6 py-3 border-b">
-                  <h2 class="font-semibold text-gray-900">{{ room.name }}</h2>
-                  @if (room.description) {
-                    <p class="text-sm text-gray-600">{{ room.description }}</p>
+          @for (i of [1,2,3]; track i) {
+            <div class="card">
+              <div class="card-header">
+                <div class="skeleton skeleton-text w-1/3 mb-2"></div>
+                <div class="skeleton skeleton-text w-1/2"></div>
+              </div>
+              <div class="card-body">
+                <div class="space-y-3">
+                  @for (j of [1,2,3]; track j) {
+                    <div class="skeleton skeleton-text"></div>
                   }
                 </div>
-                
-                <div class="divide-y">
-                  @for (task of getTasksForRoom(room.id); track task.id) {
-                    <div class="p-6 hover:bg-gray-50 transition-colors">
-                      <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                          <h3 class="font-medium text-gray-900">
-                            {{ task.task_template.name }}
-                          </h3>
-                          @if (task.task_template.description) {
-                            <p class="text-sm text-gray-600 mt-1">
-                              {{ task.task_template.description }}
-                            </p>
-                          }
-                          <div class="flex items-center gap-4 mt-2">
-                            <span class="text-sm text-gray-500">
-                              Assigné à: {{ task.default_performer.name }}
-                            </span>
-                            @if (task.suggested_time) {
-                              <span class="text-sm text-gray-500">
-                                Heure suggérée: {{ task.suggested_time }}
-                              </span>
-                            }
-                          </div>
-                        </div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else if (filteredTaskGroups().length > 0) {
+        <div class="space-y-6">
+          @for (group of filteredTaskGroups(); track group.roomId) {
+            <div class="card animate-fade-in">
+              <div class="card-header">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h3 class="card-title">{{ group.roomName }}</h3>
+                    <p class="card-subtitle">
+                      {{ group.progress.completed }} / {{ group.progress.total }} tâches complétées
+                    </p>
+                  </div>
+                  
+                  <!-- Mini progression par pièce -->
+                  <div class="flex items-center gap-3">
+                    <div class="w-20 bg-gray-200 rounded-full h-2">
+                      <div 
+                        class="bg-primary-600 h-2 rounded-full transition-all"
+                        [style.width.%]="group.progress.percentage"
+                      ></div>
+                    </div>
+                    <span class="text-sm font-medium text-gray-600">
+                      {{ group.progress.percentage | number:'1.0-0' }}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="card-body">
+                <div class="space-y-4">
+                  @for (task of group.tasks; track task.id) {
+                    <div 
+                      class="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                      [class]="getTaskRowClass(task.status)"
+                    >
+                      
+                      <!-- Statut visuel -->
+                      <div class="flex-shrink-0">
+                        <div 
+                          class="w-4 h-4 rounded-full"
+                          [style.background-color]="getStatusColor(task.status)"
+                        ></div>
+                      </div>
+                      
+                      <!-- Informations de la tâche -->
+                      <div class="flex-1">
+                        <h4 class="font-medium text-gray-900 mb-1">
+                          {{ task.assigned_task.task_template.name }}
+                        </h4>
+                        @if (task.assigned_task.task_template.description) {
+                          <p class="text-sm text-gray-600 mb-2">
+                            {{ task.assigned_task.task_template.description }}
+                          </p>
+                        }
                         
-                        <!-- Actions -->
-                        <div class="flex items-center gap-2 ml-4">
-                          @if (getLogForTask(task.id)) {
-                            <span [class]="getLogStatusClass(getLogForTask(task.id)!.status)" 
-                                  class="px-2 py-1 rounded text-xs font-medium">
-                              {{ getLogStatusText(getLogForTask(task.id)!.status) }}
-                            </span>
-                          } @else {
-                            <button
-                              (click)="markTaskComplete(task)"
-                              class="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                              title="Marquer comme fait"
-                            >
-                              <lucide-icon name="check-circle" [size]="20"></lucide-icon>
-                            </button>
-                            <button
-                              (click)="markTaskPartial(task)"
-                              class="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
-                              title="Marquer comme partiel"
-                            >
-                              <lucide-icon name="clock" [size]="20"></lucide-icon>
-                            </button>
-                            <button
-                              (click)="markTaskPostponed(task)"
-                              class="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                              title="Reporter"
-                            >
-                              <lucide-icon name="x" [size]="20"></lucide-icon>
-                            </button>
+                        <div class="flex items-center gap-4 text-sm text-gray-500">
+                          <span>⏱️ {{ task.assigned_task.task_template.estimated_duration }}min</span>
+                          @if (task.performed_by) {
+                            <span>👤 {{ task.performed_by }}</span>
+                          }
+                          @if (task.completed_at) {
+                            <span>✅ {{ formatTime(task.completed_at) }}</span>
                           }
                         </div>
                       </div>
                       
-                      <!-- Log existant -->
-                      @if (getLogForTask(task.id); as log) {
-                        <div class="mt-4 p-3 bg-gray-50 rounded-lg">
-                          <div class="flex items-center justify-between">
-                            <div>
-                              <p class="text-sm text-gray-600">
-                                Réalisé par: {{ task.default_performer.name }}
-                              </p>
-                              @if (log.notes) {
-                                <p class="text-sm text-gray-700 mt-1">{{ log.notes }}</p>
-                              }
-                            </div>
-                            <span class="text-xs text-gray-500">
-                              {{ formatTime(log.timestamp) }}
-                            </span>
-                          </div>
-                        </div>
-                      }
+                      <!-- Statut badge -->
+                      <div class="flex-shrink-0">
+                        <span 
+                          class="badge"
+                          [class]="getStatusBadgeClass(task.status)"
+                        >
+                          {{ getStatusLabel(task.status) }}
+                        </span>
+                      </div>
+                      
+                      <!-- Actions -->
+                      <div class="flex items-center gap-2">
+                        @if (task.notes) {
+                          <button 
+                            class="btn btn-ghost btn-icon btn-sm"
+                            [title]="'Notes: ' + task.notes"
+                          >
+                            📝
+                          </button>
+                        }
+                        
+                        @if (task.photos && task.photos.length > 0) {
+                          <button 
+                            class="btn btn-ghost btn-icon btn-sm"
+                            [title]="task.photos.length + ' photo(s)'"
+                          >
+                            📸
+                          </button>
+                        }
+                        
+                        <button 
+                          class="btn btn-primary btn-sm"
+                          (click)="openTaskModal(task)"
+                        >
+                          Valider
+                        </button>
+                      </div>
                     </div>
                   }
                 </div>
               </div>
-            }
+            </div>
           }
         </div>
-      </main>
+      } @else if (!isLoading()) {
+        <!-- Aucune tâche trouvée -->
+        <div class="card">
+          <div class="card-body text-center py-12">
+            <span class="text-6xl mb-4 block">🔍</span>
+            <h3 class="text-xl font-medium text-gray-900 mb-2">
+              Aucune tâche trouvée
+            </h3>
+            <p class="text-gray-600 mb-4">
+              Modifiez vos filtres pour voir plus de résultats.
+            </p>
+            <button 
+              class="btn btn-secondary"
+              (click)="resetFilters()"
+            >
+              Réinitialiser les filtres
+            </button>
+          </div>
+        </div>
+      }
     </div>
-  `,
-  styles: []
-})
-export class SessionTodayComponent implements OnInit {
-  sessionService = inject(SessionService);
-  taskService = inject(TaskService);
-  
-  // Computed signals
-  completedCount = computed(() => {
-    const logs = this.sessionService.sessionLogs();
-    return logs.filter(l => l.status === 'fait').length;
-  });
-  
-  totalTasks = computed(() => this.taskService.assignedTasks().length);
-  
-  progressPercentage = computed(() => {
-    const total = this.totalTasks();
-    if (total === 0) return 0;
-    return Math.round((this.completedCount() / total) * 100);
-  });
-  
-  canCompleteSession = computed(() => {
-    const session = this.sessionService.currentSession();
-    return session && session.status === 'en_cours' && this.completedCount() > 0;
-  });
-  
-  todayDate = new Date().toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-  
-  async ngOnInit() {
-    await this.loadSessionData();
-  }
-  
-  private async loadSessionData() {
-    const session = await this.sessionService.getTodaySession();
-    if (session) {
-      await this.sessionService.getSessionLogs(session.id);
+
+    <!-- Modal de validation de tâche -->
+    @if (taskModal().isOpen && taskModal().task) {
+      <div class="modal-overlay" (click)="closeTaskModal()">
+        <div class="modal-content max-w-2xl" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3 class="modal-title">
+              Valider la tâche : {{ taskModal().task!.assigned_task.task_template.name }}
+            </h3>
+            <button 
+              class="modal-close"
+              (click)="closeTaskModal()"
+            >
+              ✕
+            </button>
+          </div>
+          
+          <div class="modal-body">
+            <div class="space-y-4">
+              
+              <!-- Statut de la tâche -->
+              <div class="form-group">
+                <label class="form-label required">Statut</label>
+                <select 
+                  class="form-input form-select"
+                  [(ngModel)]="taskModal.status"
+                >
+                  <option value="todo">À faire</option>
+                  <option value="in_progress">En cours</option>
+                  <option value="done">Terminé</option>
+                  <option value="partial">Partiel</option>
+                  <option value="blocked">Bloqué</option>
+                  <option value="skipped">Reporté</option>
+                </select>
+              </div>
+              
+              <!-- Exécutant -->
+              <div class="form-group">
+                <label class="form-label">Exécutant</label>
+                <input 
+                  type="text"
+                  class="form-input"
+                  [(ngModel)]="taskModal.performer"
+                  placeholder="Nom de l'exécutant"
+                  list="performers-list"
+                />
+                <datalist id="performers-list">
+                  @for (performer of availablePerformers(); track performer) {
+                    <option [value]="performer">{{ performer }}</option>
+                  }
+                </datalist>
+              </div>
+              
+              <!-- Notes -->
+              <div class="form-group">
+                <label class="form-label">Notes</label>
+                <textarea 
+                  class="form-input form-textarea"
+                  [(ngModel)]="taskModal.notes"
+                  placeholder="Commentaires, observations..."
+                  rows="3"
+                ></textarea>
+              </div>
+              
+              <!-- Photos -->
+              <div class="form-group">
+                <label class="form-label">Photos</label>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <input 
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    class="hidden"
+                    #fileInput
+                    (change)="onPhotosSelected($event)"
+                  />
+                  
+                  @if (taskModal().photos.length === 0) {
+                    <div>
+                      <span class="text-4xl mb-2 block">📸</span>
+                      <p class="text-gray-600 mb-3">
+                        Ajoutez des photos pour documenter la tâche
+                      </p>
+                      <button 
+                        type="button"
+                        class="btn btn-secondary"
+                        (click)="fileInput.click()"
+                      >
+                        Choisir des photos
+                      </button>
+                    </div>
+                  } @else {
+                    <div>
+                      <p class="text-sm text-gray-600 mb-3">
+                        {{ taskModal().photos.length }} photo(s) sélectionnée(s)
+                      </p>
+                      <button 
+                        type="button"
+                        class="btn btn-secondary"
+                        (click)="fileInput.click()"
+                      >
+                        Ajouter d'autres photos
+                      </button>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="modal-footer">
+            <button 
+              class="btn btn-secondary"
+              (click)="closeTaskModal()"
+              [disabled]="savingTask()"
+            >
+              Annuler
+            </button>
+            <button 
+              class="btn btn-primary"
+              (click)="saveTask()"
+              [disabled]="savingTask()"
+            >
+              @if (savingTask()) {
+                <div class="spinner spinner-sm"></div>
+              }
+              Sauvegarder
+            </button>
+          </div>
+        </div>
+      </div>
     }
-    await this.taskService.loadAllData();
-  }
-  
-  getTasksForRoom(roomId: string) {
-    return this.taskService.assignedTasks().filter(t => t.room.id === roomId);
-  }
-  
-  getLogForTask(taskId: string): CleaningLog | undefined {
-    return this.sessionService.sessionLogs().find(l => l.assigned_task_id === taskId);
-  }
-  
-  async markTaskComplete(task: any) {
-    await this.createLog(task, 'fait');
-  }
-  
-  async markTaskPartial(task: any) {
-    await this.createLog(task, 'partiel');
-  }
-  
-  async markTaskPostponed(task: any) {
-    await this.createLog(task, 'reporte');
-  }
-  
-  private async createLog(task: any, status: CleaningLog['status']) {
-    const session = this.sessionService.currentSession();
-    if (!session) return;
-    
-    await this.sessionService.createLog({
-      session_id: session.id,
-      assigned_task_id: task.id,
-      performer_id: task.default_performer.id,
-      status,
-      timestamp: new Date().toISOString()
+  `,
+  styles: [`
+    :host {
+      display: block;
+    }
+
+    .progress-bar {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.4),
+        transparent
+      );
+      animation: progress-shine 2s infinite;
+    }
+
+    @keyframes progress-shine {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    .task-row-completed {
+      background-color: rgba(16, 185, 129, 0.05);
+      border-color: rgba(16, 185, 129, 0.2);
+    }
+
+    .task-row-in-progress {
+      background-color: rgba(59, 130, 246, 0.05);
+      border-color: rgba(59, 130, 246, 0.2);
+    }
+
+    .task-row-blocked {
+      background-color: rgba(239, 68, 68, 0.05);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+  `]
+})
+export class SessionTodayComponent {
+  // Services injectés
+  private readonly apiService = inject(ApiService);
+  readonly authService = inject(AuthService);
+
+  // Signals d'état
+  private readonly startingSession = signal(false);
+  private readonly completingSession = signal(false);
+  private readonly exportingSession = signal(false);
+  private readonly savingTask = signal(false);
+
+  // Filtres
+  readonly filters = signal<TaskFilters>({
+    status: 'all',
+    room: '',
+    performer: ''
+  });
+
+  // Modal de validation de tâche
+  readonly taskModal = signal<TaskValidationModal>({
+    isOpen: false,
+    task: null,
+    status: 'todo',
+    performer: '',
+    notes: '',
+    photos: []
+  });
+
+  // Computed signals depuis l'API
+  readonly currentSession = computed(() => this.apiService.todaySession.value());
+  readonly allTasks = computed(() => this.apiService.todayLogs.value() || []);
+  readonly isLoading = computed(() => 
+    this.apiService.todaySession.isLoading() || this.apiService.todayLogs.isLoading()
+  );
+
+  // Progress calculations
+  readonly globalProgress = computed(() => this.apiService.todayProgress());
+
+  readonly progressStats = computed(() => {
+    const tasks = this.allTasks();
+    return [
+      {
+        label: 'À faire',
+        count: tasks.filter(t => t.status === 'todo').length,
+        color: '#9CA3AF'
+      },
+      {
+        label: 'En cours',
+        count: tasks.filter(t => t.status === 'in_progress').length,
+        color: '#3B82F6'
+      },
+      {
+        label: 'Terminé',
+        count: tasks.filter(t => t.status === 'done').length,
+        color: '#10B981'
+      },
+      {
+        label: 'Bloqué',
+        count: tasks.filter(t => ['blocked', 'skipped'].includes(t.status)).length,
+        color: '#EF4444'
+      }
+    ];
+  });
+
+  // Filtered data
+  readonly filteredTasks = computed(() => {
+    const tasks = this.allTasks();
+    const filters = this.filters();
+
+    return tasks.filter(task => {
+      // Filtre par statut
+      if (filters.status !== 'all' && task.status !== filters.status) {
+        return false;
+      }
+
+      // Filtre par pièce
+      if (filters.room && task.assigned_task.room_id !== filters.room) {
+        return false;
+      }
+
+      // Filtre par exécutant
+      if (filters.performer && task.performed_by !== filters.performer) {
+        return false;
+      }
+
+      return true;
+    });
+  });
+
+  readonly filteredTaskGroups = computed((): RoomTaskGroup[] => {
+    const tasks = this.filteredTasks();
+    const groupsMap = new Map<string, CleaningLog[]>();
+
+    // Grouper par pièce
+    tasks.forEach(task => {
+      const roomId = task.assigned_task.room_id;
+      const roomName = task.assigned_task.room.name;
+      
+      if (!groupsMap.has(roomId)) {
+        groupsMap.set(roomId, []);
+      }
+      groupsMap.get(roomId)!.push(task);
+    });
+
+    // Convertir en RoomTaskGroup avec calculs de progression
+    return Array.from(groupsMap.entries()).map(([roomId, tasks]) => {
+      const completed = tasks.filter(t => t.status === 'done').length;
+      const total = tasks.length;
+      
+      return {
+        roomId,
+        roomName: tasks[0].assigned_task.room.name,
+        tasks: tasks.sort((a, b) => a.assigned_task.task_template.name.localeCompare(b.assigned_task.task_template.name)),
+        progress: {
+          completed,
+          total,
+          percentage: total > 0 ? (completed / total) * 100 : 0
+        }
+      };
+    }).sort((a, b) => a.roomName.localeCompare(b.roomName));
+  });
+
+  // Options pour les filtres
+  readonly availableRooms = computed(() => {
+    const rooms = new Map<string, { id: string, name: string }>();
+    this.allTasks().forEach(task => {
+      const room = task.assigned_task.room;
+      rooms.set(room.id, { id: room.id, name: room.name });
+    });
+    return Array.from(rooms.values()).sort((a, b) => a.name.localeCompare(b.name));
+  });
+
+  readonly availablePerformers = computed(() => {
+    const performers = new Set<string>();
+    this.allTasks().forEach(task => {
+      if (task.performed_by) {
+        performers.add(task.performed_by);
+      }
+    });
+    // Ajouter quelques performers par défaut
+    performers.add('Marie Dupont');
+    performers.add('Pierre Martin');
+    performers.add('Sophie Bernard');
+    return Array.from(performers).sort();
+  });
+
+  // Permissions
+  readonly canCompleteSession = computed(() => {
+    const session = this.currentSession();
+    const progress = this.globalProgress();
+    return session && 
+           session.status === 'in_progress' && 
+           progress && 
+           progress.percentage >= 80; // Minimum 80% pour terminer
+  });
+
+  readonly canExportSession = computed(() => {
+    const session = this.currentSession();
+    return session && ['completed', 'incomplete'].includes(session.status);
+  });
+
+  constructor() {
+    // Effect pour rafraîchir automatiquement
+    effect(() => {
+      if (this.currentSession()) {
+        const interval = setInterval(() => {
+          this.apiService.refreshData();
+        }, 15000); // Refresh toutes les 15 secondes
+
+        return () => clearInterval(interval);
+      }
     });
   }
-  
-  async completeSession() {
-    const session = this.sessionService.currentSession();
-    if (session) {
-      await this.sessionService.updateSessionStatus(session.id, 'completee');
+
+  /**
+   * Actions principales
+   */
+  async startNewSession(): Promise<void> {
+    if (this.startingSession()) return;
+
+    this.startingSession.set(true);
+    try {
+      await this.apiService.startNewSession();
+    } catch (error) {
+      console.error('Erreur lors du démarrage de la session:', error);
+    } finally {
+      this.startingSession.set(false);
     }
   }
-  
-  getStatusText(): string {
-    const session = this.sessionService.currentSession();
-    if (!session) return 'Non démarrée';
-    
-    const statusMap = {
-      'en_cours': 'En cours',
-      'completee': 'Complétée',
-      'incomplete': 'Incomplète'
-    };
-    return statusMap[session.status];
+
+  async completeSession(): Promise<void> {
+    const session = this.currentSession();
+    if (!session || this.completingSession()) return;
+
+    this.completingSession.set(true);
+    try {
+      // TODO: Implémenter l'API pour terminer une session
+      console.log('Terminer session:', session.id);
+    } catch (error) {
+      console.error('Erreur lors de la finalisation:', error);
+    } finally {
+      this.completingSession.set(false);
+    }
   }
-  
-  getStatusBadgeClass(): string {
-    const session = this.sessionService.currentSession();
-    if (!session) return 'bg-gray-100 text-gray-700';
-    
-    const classes = {
-      'en_cours': 'bg-yellow-100 text-yellow-700',
-      'completee': 'bg-green-100 text-green-700',
-      'incomplete': 'bg-red-100 text-red-700'
-    };
-    return classes[session.status];
+
+  async exportSession(): Promise<void> {
+    const session = this.currentSession();
+    if (!session || this.exportingSession()) return;
+
+    this.exportingSession.set(true);
+    try {
+      const blob = await this.apiService.downloadReport(session.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `session-${this.formatDate(session.date)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Erreur lors de l\'export:', error);
+    } finally {
+      this.exportingSession.set(false);
+    }
   }
-  
-  getLogStatusClass(status: string): string {
-    const classes = {
-      'fait': 'bg-green-100 text-green-700',
-      'partiel': 'bg-yellow-100 text-yellow-700',
-      'reporte': 'bg-orange-100 text-orange-700',
-      'impossible': 'bg-red-100 text-red-700'
-    };
-    return classes[status as keyof typeof classes] || 'bg-gray-100 text-gray-700';
+
+  /**
+   * Gestion des filtres
+   */
+  updateFilters(): void {
+    // Les computed signals se mettront à jour automatiquement
   }
-  
-  getLogStatusText(status: string): string {
-    const texts = {
-      'fait': 'Fait',
-      'partiel': 'Partiel',
-      'reporte': 'Reporté',
-      'impossible': 'Impossible'
-    };
-    return texts[status as keyof typeof texts] || status;
+
+  resetFilters(): void {
+    this.filters.set({
+      status: 'all',
+      room: '',
+      performer: ''
+    });
   }
-  
+
+  /**
+   * Gestion du modal de tâche
+   */
+  openTaskModal(task: CleaningLog): void {
+    this.taskModal.set({
+      isOpen: true,
+      task,
+      status: task.status,
+      performer: task.performed_by || '',
+      notes: task.notes || '',
+      photos: []
+    });
+  }
+
+  closeTaskModal(): void {
+    this.taskModal.set({
+      isOpen: false,
+      task: null,
+      status: 'todo',
+      performer: '',
+      notes: '',
+      photos: []
+    });
+  }
+
+  async saveTask(): Promise<void> {
+    const modal = this.taskModal();
+    if (!modal.task || this.savingTask()) return;
+
+    this.savingTask.set(true);
+    try {
+      // Upload des photos d'abord
+      const photoUrls: string[] = [];
+      for (const photo of modal.photos) {
+        const url = await this.apiService.uploadPhoto(photo);
+        photoUrls.push(url);
+      }
+
+      // Mise à jour de la tâche
+      await this.apiService.updateCleaningLog(modal.task.id, {
+        status: modal.status,
+        performed_by: modal.performer || undefined,
+        notes: modal.notes || undefined,
+        photos: photoUrls.length > 0 ? photoUrls : undefined
+      });
+
+      this.closeTaskModal();
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+    } finally {
+      this.savingTask.set(false);
+    }
+  }
+
+  onPhotosSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files) {
+      const newPhotos = Array.from(input.files);
+      this.taskModal.update(modal => ({
+        ...modal,
+        photos: [...modal.photos, ...newPhotos]
+      }));
+    }
+  }
+
+  /**
+   * Utilitaires d'affichage
+   */
+  formatDate(date: string): string {
+    return new Intl.DateTimeFormat('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }).format(new Date(date));
+  }
+
   formatTime(timestamp: string): string {
-    return new Date(timestamp).toLocaleTimeString('fr-FR', {
+    return new Intl.DateTimeFormat('fr-FR', {
       hour: '2-digit',
       minute: '2-digit'
-    });
+    }).format(new Date(timestamp));
+  }
+
+  getSessionDescription(session: CleaningSession): string {
+    const progress = this.globalProgress();
+    if (progress) {
+      return `${progress.completed} / ${progress.total} tâches complétées`;
+    }
+    return `${session.completed_tasks} / ${session.total_tasks} tâches`;
+  }
+
+  getSessionStatusClass(status: CleaningSession['status']): string {
+    const classes = {
+      pending: 'badge-gray',
+      in_progress: 'badge-primary',
+      completed: 'badge-success',
+      incomplete: 'badge-warning'
+    };
+    return classes[status] || 'badge-gray';
+  }
+
+  getSessionStatusLabel(status: CleaningSession['status']): string {
+    const labels = {
+      pending: 'En attente',
+      in_progress: 'En cours',
+      completed: 'Terminée',
+      incomplete: 'Incomplète'
+    };
+    return labels[status] || status;
+  }
+
+  getStatusColor(status: CleaningLog['status']): string {
+    const colors = {
+      todo: '#9CA3AF',
+      in_progress: '#3B82F6',
+      done: '#10B981',
+      partial: '#F59E0B',
+      blocked: '#EF4444',
+      skipped: '#EF4444'
+    };
+    return colors[status] || '#9CA3AF';
+  }
+
+  getStatusBadgeClass(status: CleaningLog['status']): string {
+    const classes = {
+      todo: 'badge-gray',
+      in_progress: 'badge-primary',
+      done: 'badge-success',
+      partial: 'badge-warning',
+      blocked: 'badge-danger',
+      skipped: 'badge-danger'
+    };
+    return classes[status] || 'badge-gray';
+  }
+
+  getStatusLabel(status: CleaningLog['status']): string {
+    const labels = {
+      todo: 'À faire',
+      in_progress: 'En cours',
+      done: 'Terminé',
+      partial: 'Partiel',
+      blocked: 'Bloqué',
+      skipped: 'Reporté'
+    };
+    return labels[status] || status;
+  }
+
+  getTaskRowClass(status: CleaningLog['status']): string {
+    const classes = {
+      done: 'task-row-completed',
+      in_progress: 'task-row-in-progress',
+      blocked: 'task-row-blocked',
+      skipped: 'task-row-blocked'
+    };
+    return classes[status] || '';
   }
 }

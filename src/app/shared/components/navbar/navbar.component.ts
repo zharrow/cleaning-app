@@ -1,3 +1,6 @@
+// ========================================
+// src/app/shared/components/navbar/navbar.component.ts
+// ========================================
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
@@ -37,7 +40,7 @@ import { LucideAngularModule } from 'lucide-angular';
                 routerLinkActive="border-primary-500 text-gray-900"
                 class="border-b-2 border-transparent hover:border-gray-300 px-1 pt-1 pb-3 flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
               >
-                <lucide-icon name="calendar" [size]="18"></lucide-icon>
+                <lucide-icon name="calendar-days" [size]="18"></lucide-icon>
                 <span>Session du jour</span>
               </a>
               
@@ -159,7 +162,37 @@ import { LucideAngularModule } from 'lucide-angular';
       }
     </nav>
   `,
-  styles: []
+  styles: [`
+    @keyframes fade-in {
+      from {
+        opacity: 0;
+        transform: translateY(-8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes slide-in {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .animate-fade-in {
+      animation: fade-in 0.2s ease-out;
+    }
+    
+    .animate-slide-in {
+      animation: slide-in 0.3s ease-out;
+    }
+  `]
 })
 export class NavbarComponent {
   private authService = inject(AuthService);
@@ -167,19 +200,28 @@ export class NavbarComponent {
   isMobileMenuOpen = signal(false);
   isUserMenuOpen = signal(false);
   
-  userName = computed(() => this.authService.appUser()?.full_name || 'Utilisateur');
+  userName = computed(() => {
+    const appUser = this.authService.appUser();
+    if (appUser?.prenom && appUser?.nom) {
+      return `${appUser.prenom} ${appUser.nom}`;
+    }
+    return this.authService.currentUser()?.email?.split('@')[0] || 'Utilisateur';
+  });
+  
   userEmail = computed(() => this.authService.currentUser()?.email || '');
+  
   roleLabel = computed(() => {
     const role = this.authService.userRole();
     if (role === 'admin') return 'Admin';
     if (role === 'manager' || role === 'gerante') return 'Gérante';
     return '';
   });
+  
   canManage = computed(() => this.authService.canManage());
   
   getUserInitials(): string {
     const name = this.userName();
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
   }
   
   toggleMobileMenu() {
@@ -208,7 +250,11 @@ export class NavbarComponent {
   
   async handleLogout() {
     if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
-      await this.authService.signOutUser();
+      try {
+        await this.authService.signOut();
+      } catch (error) {
+        console.error('Erreur lors de la déconnexion:', error);
+      }
     }
   }
 }

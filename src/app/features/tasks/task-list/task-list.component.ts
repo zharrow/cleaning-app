@@ -1,225 +1,360 @@
 // ========================================
-// src/app/features/tasks/task-list/task-list.component.ts
+// Composant Liste des tâches - src/app/features/tasks/task-list/task-list.component.ts
 // ========================================
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { NavbarComponent } from '../../../shared/components/navbar/navbar.component';
-import { TaskService } from '../task.service';
+import { RouterLink } from '@angular/router';
+import { ApiService, type AssignedTask } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { LucideAngularModule } from 'lucide-angular';
 
+/**
+ * Composant de liste des tâches
+ * Affiche toutes les tâches assignées avec possibilité de filtrage
+ */
 @Component({
   selector: 'app-task-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, NavbarComponent, LucideAngularModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <div class="min-h-screen bg-gray-50">
-      <app-navbar></app-navbar>
+    <div class="page-container">
       
-      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-8">
+      <!-- En-tête -->
+      <div class="page-header">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h1 class="text-2xl font-bold text-gray-900">Gestion des tâches</h1>
-            <p class="text-gray-600 mt-1">{{ taskService.activeTasksCount() }} tâches actives</p>
+            <h1 class="page-title">Mes tâches</h1>
+            <p class="page-subtitle">
+              Vue d'ensemble de toutes les tâches assignées
+            </p>
           </div>
-          @if (canManage()) {
-          <button
-            (click)="openAddTaskModal()"
-            class="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-          >
-            <lucide-icon name="plus" [size]="20"></lucide-icon>
-            <span>Nouvelle tâche</span>
-          </button>
-          }
+          
+          <div class="flex items-center gap-3">
+            <a routerLink="/session" class="btn btn-primary">
+              <span class="text-lg">📋</span>
+              Session du jour
+            </a>
+          </div>
         </div>
+      </div>
 
-        <!-- Filtres -->
-        <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
-          <div class="flex flex-col sm:flex-row gap-4">
-            <div class="flex-1 relative">
-              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <lucide-icon name="search" [size]="20" class="text-gray-400"></lucide-icon>
+      <!-- Statistiques -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="card">
+          <div class="card-body">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600">Total des tâches</p>
+                <p class="text-2xl font-bold text-gray-900">{{ allTasks().length }}</p>
               </div>
-              <input
-                type="text"
-                [(ngModel)]="searchQuery"
-                placeholder="Rechercher une tâche..."
-                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              />
+              <span class="text-3xl">📝</span>
             </div>
-            <select
-              [(ngModel)]="filterRoom"
-              class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            >
-              <option value="">Toutes les pièces</option>
-              @for (room of taskService.rooms(); track room.id) {
-                <option [value]="room.id">{{ room.name }}</option>
-              }
-            </select>
-            <select
-              [(ngModel)]="filterPerformer"
-              class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            >
-              <option value="">Tous les exécutants</option>
-              @for (performer of taskService.performers(); track performer.id) {
-                <option [value]="performer.id">{{ performer.name }}</option>
-              }
-            </select>
           </div>
         </div>
-
-        <!-- Liste des tâches -->
-        @if (taskService.isLoading()) {
-          <div class="space-y-4">
-            @for (i of [1,2,3,4]; track i) {
-              <div class="bg-white rounded-xl shadow-sm p-6">
-                <div class="h-6 bg-gray-200 rounded w-1/3 mb-3 skeleton"></div>
-                <div class="h-4 bg-gray-200 rounded w-2/3 skeleton"></div>
+        
+        <div class="card">
+          <div class="card-body">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600">Quotidiennes</p>
+                <p class="text-2xl font-bold text-success-600">{{ dailyTasksCount() }}</p>
               </div>
-            }
+              <span class="text-3xl">📅</span>
+            </div>
           </div>
-        } @else {
-          <div class="grid gap-4">
-            @for (task of getFilteredTasks(); track task.id) {
-              <div class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
-                <div class="flex items-start justify-between">
-                  <div class="flex-1">
-                    <h3 class="text-lg font-semibold text-gray-900">
-                      {{ task.task_template.name }}
-                    </h3>
-                    @if (task.task_template.description) {
-                      <p class="text-gray-600 mt-1">{{ task.task_template.description }}</p>
-                    }
-                    
-                    <div class="flex flex-wrap gap-4 mt-3">
-                      <div class="flex items-center gap-2">
-                        <span class="text-sm text-gray-500">Pièce:</span>
-                        <span class="text-sm font-medium text-gray-900">{{ task.room.name }}</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <span class="text-sm text-gray-500">Exécutant:</span>
-                        <span class="text-sm font-medium text-gray-900">{{ task.default_performer.name }}</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <span class="text-sm text-gray-500">Fréquence:</span>
-                        <span class="text-sm font-medium text-gray-900">
-                          {{ task.frequency_days === 1 ? 'Quotidien' : 'Tous les ' + task.frequency_days + ' jours' }}
-                        </span>
-                      </div>
-                      @if (task.suggested_time) {
-                        <div class="flex items-center gap-2">
-                          <span class="text-sm text-gray-500">Heure:</span>
-                          <span class="text-sm font-medium text-gray-900">{{ task.suggested_time }}</span>
-                        </div>
-                      }
-                    </div>
-                    
-                    <div class="flex items-center gap-2 mt-3">
-                      @if (task.is_active) {
-                        <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">
-                          Active
-                        </span>
-                      } @else {
-                        <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded">
-                          Inactive
-                        </span>
-                      }
-                    </div>
-                  </div>
-                  
-                  <!-- Actions -->
-                  @if (canManage()) {
-                  <div class="flex items-center gap-2 ml-4">
-                    <button
-                      (click)="editTask(task)"
-                      class="p-2 text-gray-600 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
-                      title="Modifier"
-                    >
-                      <lucide-icon name="edit" [size]="18"></lucide-icon>
-                    </button>
-                    <button
-                      (click)="deleteTask(task)"
-                      class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Supprimer"
-                    >
-                      <lucide-icon name="trash-2" [size]="18"></lucide-icon>
-                    </button>
-                  </div>
-                  }
+        </div>
+        
+        <div class="card">
+          <div class="card-body">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600">Hebdomadaires</p>
+                <p class="text-2xl font-bold text-warning-600">{{ weeklyTasksCount() }}</p>
+              </div>
+              <span class="text-3xl">📆</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-body">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600">Durée totale/jour</p>
+                <p class="text-2xl font-bold text-primary-600">{{ totalDailyDuration() }}min</p>
+              </div>
+              <span class="text-3xl">⏱️</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filtres -->
+      <div class="card mb-6">
+        <div class="card-body">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label class="form-label text-sm">Pièce</label>
+              <select class="form-input form-select" [(ngModel)]="filters.room">
+                <option value="">Toutes les pièces</option>
+                @for (room of availableRooms(); track room.id) {
+                  <option [value]="room.id">{{ room.name }}</option>
+                }
+              </select>
+            </div>
+            
+            <div>
+              <label class="form-label text-sm">Fréquence</label>
+              <select class="form-input form-select" [(ngModel)]="filters.frequency">
+                <option value="">Toutes</option>
+                <option value="daily">Quotidien</option>
+                <option value="weekly">Hebdomadaire</option>
+                <option value="monthly">Mensuel</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="form-label text-sm">Catégorie</label>
+              <select class="form-input form-select" [(ngModel)]="filters.category">
+                <option value="">Toutes</option>
+                @for (category of availableCategories(); track category) {
+                  <option [value]="category">{{ category }}</option>
+                }
+              </select>
+            </div>
+            
+            <div class="flex items-end">
+              <button class="btn btn-secondary" (click)="resetFilters()">
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vue par pièces -->
+      <div class="space-y-6">
+        @for (roomGroup of groupedTasks(); track roomGroup.roomId) {
+          <div class="card">
+            <div class="card-header">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="card-title">{{ roomGroup.roomName }}</h3>
+                  <p class="card-subtitle">
+                    {{ roomGroup.tasks.length }} tâche(s) assignée(s)
+                  </p>
+                </div>
+                
+                <!-- Statistiques de la pièce -->
+                <div class="text-right">
+                  <p class="text-sm text-gray-600">Temps total/jour</p>
+                  <p class="font-semibold text-primary-600">{{ roomGroup.dailyDuration }}min</p>
                 </div>
               </div>
-            }
+            </div>
+            
+            <div class="card-body">
+              <div class="overflow-x-auto">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Tâche</th>
+                      <th>Catégorie</th>
+                      <th>Fréquence</th>
+                      <th>Durée</th>
+                      <th>Exécutant par défaut</th>
+                      <th>Heure suggérée</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (task of roomGroup.tasks; track task.id) {
+                      <tr>
+                        <td>
+                          <div>
+                            <p class="font-medium text-gray-900">
+                              {{ task.task_template.name }}
+                            </p>
+                            @if (task.task_template.description) {
+                              <p class="text-sm text-gray-600">
+                                {{ task.task_template.description }}
+                              </p>
+                            }
+                          </div>
+                        </td>
+                        <td>
+                          <span class="badge badge-primary">
+                            {{ task.task_template.category }}
+                          </span>
+                        </td>
+                        <td>
+                          <span 
+                            class="badge"
+                            [class]="getFrequencyBadgeClass(task.frequency)"
+                          >
+                            {{ getFrequencyLabel(task.frequency) }}
+                          </span>
+                        </td>
+                        <td>
+                          <span class="font-medium text-gray-900">
+                            {{ task.task_template.estimated_duration }}min
+                          </span>
+                        </td>
+                        <td>
+                          <span class="text-gray-600">
+                            {{ task.default_performer || '-' }}
+                          </span>
+                        </td>
+                        <td>
+                          <span class="text-gray-600">
+                            {{ task.suggested_time || '-' }}
+                          </span>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         }
-        
-        @if (!taskService.isLoading() && getFilteredTasks().length === 0) {
-          <div class="bg-white rounded-xl shadow-sm p-12 text-center">
-            <p class="text-gray-500">Aucune tâche trouvée</p>
+      </div>
+
+      @if (filteredTasks().length === 0) {
+        <div class="card">
+          <div class="card-body text-center py-12">
+            <span class="text-6xl mb-4 block">🔍</span>
+            <h3 class="text-xl font-medium text-gray-900 mb-2">
+              Aucune tâche trouvée
+            </h3>
+            <p class="text-gray-600 mb-4">
+              Aucune tâche ne correspond à vos critères de recherche.
+            </p>
+            <button class="btn btn-secondary" (click)="resetFilters()">
+              Réinitialiser les filtres
+            </button>
           </div>
-        }
-      </main>
+        </div>
+      }
     </div>
   `,
-  styles: []
+  styles: [`
+    :host {
+      display: block;
+    }
+  `]
 })
-export class TaskListComponent implements OnInit {
-  taskService = inject(TaskService);
-  auth = inject(AuthService);
-  canManage = computed(() => this.auth.canManage());
-  
-  searchQuery = '';
-  filterRoom = '';
-  filterPerformer = '';
-  
-  ngOnInit() {
-    this.loadTasks();
-  }
-  
-  private async loadTasks() {
-    await this.taskService.loadAllData();
-  }
-  
-  getFilteredTasks() {
-    let tasks = this.taskService.assignedTasks();
-    
-    // Filtre par recherche
-    if (this.searchQuery) {
-      const query = this.searchQuery.toLowerCase();
-      tasks = tasks.filter(t => 
-        t.task_template.name.toLowerCase().includes(query) ||
-        t.task_template.description?.toLowerCase().includes(query)
-      );
+export class TaskListComponent {
+  private readonly apiService = inject(ApiService);
+  readonly authService = inject(AuthService);
+
+  // Filtres
+  readonly filters = signal({
+    room: '',
+    frequency: '',
+    category: ''
+  });
+
+  // Computed signals
+  readonly allTasks = computed(() => this.apiService.assignedTasks.value() || []);
+  readonly isLoading = computed(() => this.apiService.assignedTasks.isLoading());
+
+  readonly dailyTasksCount = computed(() => 
+    this.allTasks().filter(task => task.frequency === 'daily').length
+  );
+
+  readonly weeklyTasksCount = computed(() => 
+    this.allTasks().filter(task => task.frequency === 'weekly').length
+  );
+
+  readonly totalDailyDuration = computed(() => 
+    this.allTasks()
+      .filter(task => task.frequency === 'daily')
+      .reduce((total, task) => total + task.task_template.estimated_duration, 0)
+  );
+
+  readonly availableRooms = computed(() => {
+    const rooms = new Map<string, { id: string, name: string }>();
+    this.allTasks().forEach(task => {
+      rooms.set(task.room_id, { id: task.room_id, name: task.room.name });
+    });
+    return Array.from(rooms.values()).sort((a, b) => a.name.localeCompare(b.name));
+  });
+
+  readonly availableCategories = computed(() => {
+    const categories = new Set<string>();
+    this.allTasks().forEach(task => {
+      categories.add(task.task_template.category);
+    });
+    return Array.from(categories).sort();
+  });
+
+  readonly filteredTasks = computed(() => {
+    let tasks = this.allTasks();
+    const currentFilters = this.filters();
+
+    if (currentFilters.room) {
+      tasks = tasks.filter(task => task.room_id === currentFilters.room);
     }
-    
-    // Filtre par pièce
-    if (this.filterRoom) {
-      tasks = tasks.filter(t => t.room.id === this.filterRoom);
+
+    if (currentFilters.frequency) {
+      tasks = tasks.filter(task => task.frequency === currentFilters.frequency);
     }
-    
-    // Filtre par exécutant
-    if (this.filterPerformer) {
-      tasks = tasks.filter(t => t.default_performer.id === this.filterPerformer);
+
+    if (currentFilters.category) {
+      tasks = tasks.filter(task => task.task_template.category === currentFilters.category);
     }
-    
+
     return tasks;
+  });
+
+  readonly groupedTasks = computed(() => {
+    const tasks = this.filteredTasks();
+    const groups = new Map<string, AssignedTask[]>();
+
+    tasks.forEach(task => {
+      const roomId = task.room_id;
+      if (!groups.has(roomId)) {
+        groups.set(roomId, []);
+      }
+      groups.get(roomId)!.push(task);
+    });
+
+    return Array.from(groups.entries()).map(([roomId, tasks]) => ({
+      roomId,
+      roomName: tasks[0].room.name,
+      tasks: tasks.sort((a, b) => a.task_template.name.localeCompare(b.task_template.name)),
+      dailyDuration: tasks
+        .filter(task => task.frequency === 'daily')
+        .reduce((total, task) => total + task.task_template.estimated_duration, 0)
+    })).sort((a, b) => a.roomName.localeCompare(b.roomName));
+  });
+
+  /**
+   * Actions
+   */
+  resetFilters(): void {
+    this.filters.set({
+      room: '',
+      frequency: '',
+      category: ''
+    });
   }
-  
-  openAddTaskModal() {
-    console.log('Ouvrir modal ajout tâche');
-    // TODO: Implémenter le modal d'ajout
+
+  getFrequencyLabel(frequency: string): string {
+    const labels = {
+      daily: 'Quotidien',
+      weekly: 'Hebdomadaire',
+      monthly: 'Mensuel'
+    };
+    return labels[frequency as keyof typeof labels] || frequency;
   }
-  
-  editTask(task: any) {
-    console.log('Éditer tâche:', task);
-    // TODO: Implémenter l'édition
-  }
-  
-  deleteTask(task: any) {
-    if (confirm(`Êtes-vous sûr de vouloir supprimer la tâche "${task.task_template.name}" ?`)) {
-      console.log('Supprimer tâche:', task);
-      // TODO: Implémenter la suppression
-    }
+
+  getFrequencyBadgeClass(frequency: string): string {
+    const classes = {
+      daily: 'badge-success',
+      weekly: 'badge-warning',
+      monthly: 'badge-primary'
+    };
+    return classes[frequency as keyof typeof classes] || 'badge-gray';
   }
 }
