@@ -1,0 +1,526 @@
+{
+  "comment": "Configuration du Service Worker Angular - ngsw-config.json",
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "app",
+      "installMode": "prefetch",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/favicon.ico",
+          "/index.html",
+          "/manifest.webmanifest",
+          "/*.css",
+          "/*.js"
+        ]
+      }
+    },
+    {
+      "name": "assets",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/assets/**",
+          "/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"
+        ]
+      }
+    }
+  ],
+  "dataGroups": [
+    {
+      "name": "api-tasks-cache",
+      "urls": [
+        "/api/tasks/**",
+        "/api/rooms/**",
+        "/api/dashboard"
+      ],
+      "cacheConfig": {
+        "maxSize": 100,
+        "maxAge": "6h",
+        "timeout": "10s",
+        "strategy": "freshness"
+      }
+    },
+    {
+      "name": "api-sessions-cache",
+      "urls": [
+        "/api/sessions/**"
+      ],
+      "cacheConfig": {
+        "maxSize": 50,
+        "maxAge": "1h",
+        "timeout": "5s",
+        "strategy": "performance"
+      }
+    },
+    {
+      "name": "api-critical",
+      "urls": [
+        "/api/auth/**",
+        "/api/logs/**"
+      ],
+      "cacheConfig": {
+        "maxSize": 10,
+        "maxAge": "30m",
+        "timeout": "3s",
+        "strategy": "freshness"
+      }
+    },
+    {
+      "name": "api-offline-fallback",
+      "urls": [
+        "/api/**"
+      ],
+      "cacheConfig": {
+        "maxSize": 20,
+        "maxAge": "1d",
+        "timeout": "2s",
+        "strategy": "performance"
+      }
+    }
+  ],
+  "navigationUrls": [
+    "/**",
+    "!/**/*.*",
+    "!/**/*__*",
+    "!/**/*__*/**"
+  ]
+}
+
+{
+  "comment": "Manifest PWA - src/manifest.webmanifest",
+  "name": "Micro-Crèche - Gestion du nettoyage",
+  "short_name": "Micro-Crèche",
+  "description": "Application de gestion du nettoyage quotidien pour micro-crèche. Planification, suivi et validation des tâches de nettoyage avec fonctionnalité hors ligne.",
+  "theme_color": "#3B82F6",
+  "background_color": "#F8FAFC",
+  "display": "standalone",
+  "scope": "./",
+  "start_url": "./",
+  "orientation": "portrait-primary",
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "categories": [
+    "productivity",
+    "business",
+    "utilities"
+  ],
+  "screenshots": [
+    {
+      "src": "assets/screenshots/dashboard-mobile.png",
+      "sizes": "393x852",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Tableau de bord sur mobile"
+    },
+    {
+      "src": "assets/screenshots/session-mobile.png",
+      "sizes": "393x852",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Session de nettoyage sur mobile"
+    },
+    {
+      "src": "assets/screenshots/dashboard-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Tableau de bord sur desktop"
+    }
+  ],
+  "icons": [
+    {
+      "src": "assets/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Session du jour",
+      "short_name": "Session",
+      "description": "Accéder rapidement à la session de nettoyage du jour",
+      "url": "/session",
+      "icons": [
+        {
+          "src": "assets/icons/shortcut-session.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Tableau de bord",
+      "short_name": "Dashboard",
+      "description": "Voir les statistiques et la progression",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "assets/icons/shortcut-dashboard.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Nouvelle session",
+      "short_name": "Nouveau",
+      "description": "Démarrer une nouvelle session de nettoyage",
+      "url": "/session?action=new",
+      "icons": [
+        {
+          "src": "assets/icons/shortcut-new.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "file_handlers": [
+    {
+      "action": "/import",
+      "accept": {
+        "application/json": [".json"],
+        "text/csv": [".csv"]
+      }
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+microcreche",
+      "url": "/handle-protocol?url=%s"
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "photos",
+          "accept": ["image/jpeg", "image/png", "image/webp"]
+        }
+      ]
+    }
+  }
+}
+
+{
+  "comment": "Service Worker personnalisé - src/sw-custom.js",
+  "// Service Worker personnalisé pour fonctionnalités avancées": "",
+  "// À utiliser en complément du service worker Angular": "",
+  
+  "// Configuration": "",
+  "const CACHE_NAME = 'micro-creche-v1'": "",
+  "const OFFLINE_CACHE_NAME = 'micro-creche-offline-v1'": "",
+  "const PHOTOS_CACHE_NAME = 'micro-creche-photos-v1'": "",
+  
+  "// URLs critiques à mettre en cache": "",
+  "const CRITICAL_URLS = [": "",
+    "  '/'": "",
+    "  '/login'": "",
+    "  '/dashboard'": "",
+    "  '/session'": "",
+    "  '/offline'": "",
+    "  '/assets/icons/icon-192x192.png'": "",
+    "  '/manifest.webmanifest'": "",
+  "]": "",
+  
+  "// Installation du Service Worker": "",
+  "self.addEventListener('install', (event) => {": "",
+    "  console.log('SW: Installation en cours...')": "",
+    "  event.waitUntil(": "",
+      "    caches.open(CACHE_NAME).then((cache) => {": "",
+        "      console.log('SW: Mise en cache des ressources critiques')": "",
+        "      return cache.addAll(CRITICAL_URLS)": "",
+      "    }).catch((error) => {": "",
+        "      console.error('SW: Erreur lors de la mise en cache:', error)": "",
+      "    })": "",
+    "  )": "",
+    "  // Force l'activation immédiate": "",
+    "  self.skipWaiting()": "",
+  "})": "",
+  
+  "// Activation du Service Worker": "",
+  "self.addEventListener('activate', (event) => {": "",
+    "  console.log('SW: Activation en cours...')": "",
+    "  event.waitUntil(": "",
+    "    caches.keys().then((cacheNames) => {": "",
+      "      return Promise.all(": "",
+        "        cacheNames.map((cacheName) => {": "",
+          "          // Supprimer les anciens caches": "",
+          "          if (cacheName.startsWith('micro-creche-') && cacheName !== CACHE_NAME && cacheName !== OFFLINE_CACHE_NAME && cacheName !== PHOTOS_CACHE_NAME) {": "",
+            "            console.log('SW: Suppression de l\\'ancien cache:', cacheName)": "",
+            "            return caches.delete(cacheName)": "",
+          "          }": "",
+        "        })": "",
+      "      )": "",
+    "    }).then(() => {": "",
+      "      // Prendre le contrôle de toutes les pages": "",
+      "      return self.clients.claim()": "",
+    "    })": "",
+  "  )": "",
+  "})": "",
+  
+  "// Interception des requêtes": "",
+  "self.addEventListener('fetch', (event) => {": "",
+    "  const { request } = event": "",
+    "  const url = new URL(request.url)": "",
+    
+    "  // Stratégie pour les requêtes API": "",
+    "  if (url.pathname.startsWith('/api/')) {": "",
+      "    event.respondWith(handleApiRequest(request))": "",
+      "    return": "",
+    "  }": "",
+    
+    "  // Stratégie pour les images uploadées": "",
+    "  if (request.destination === 'image' && url.pathname.includes('/uploads/')) {": "",
+      "    event.respondWith(handleImageRequest(request))": "",
+      "    return": "",
+    "  }": "",
+    
+    "  // Stratégie par défaut (cache-first pour les assets)": "",
+    "  event.respondWith(handleDefaultRequest(request))": "",
+  "})": "",
+  
+  "// Gestion des requêtes API (Network-first avec fallback)": "",
+  "async function handleApiRequest(request) {": "",
+    "  try {": "",
+      "    // Essayer le réseau en premier": "",
+      "    const networkResponse = await fetch(request.clone())": "",
+      
+      "    // Si succès, mettre en cache pour les requêtes GET": "",
+      "    if (networkResponse.ok && request.method === 'GET') {": "",
+        "      const cache = await caches.open(CACHE_NAME)": "",
+        "      cache.put(request, networkResponse.clone())": "",
+      "    }": "",
+      
+      "    return networkResponse": "",
+    "  } catch (error) {": "",
+      "    console.log('SW: Réseau indisponible, recherche en cache...')": "",
+      
+      "    // Fallback vers le cache": "",
+      "    const cachedResponse = await caches.match(request)": "",
+      "    if (cachedResponse) {": "",
+        "      return cachedResponse": "",
+      "    }": "",
+      
+      "    // Si pas de cache et requête critique, retourner une réponse d'erreur": "",
+      "    if (request.url.includes('/api/auth/') || request.url.includes('/api/sessions/today')) {": "",
+        "      return new Response(": "",
+        "        JSON.stringify({": "",
+          "          error: 'offline',": "",
+          "          message: 'Cette fonctionnalité nécessite une connexion internet'": "",
+        "        }),": "",
+        "        {": "",
+          "          status: 503,": "",
+          "          statusText: 'Service Unavailable',": "",
+          "          headers: { 'Content-Type': 'application/json' }": "",
+        "        }": "",
+      "      )": "",
+    "    }": "",
+      
+    "    // Autres API : retourner les données en cache si disponibles": "",
+    "    return caches.match('/offline-data.json') || new Response('{}', {": "",
+      "      headers: { 'Content-Type': 'application/json' }": "",
+    "    })": "",
+  "  }": "",
+  "}": "",
+  
+  "// Gestion des images (Cache-first)": "",
+  "async function handleImageRequest(request) {": "",
+    "  const cache = await caches.open(PHOTOS_CACHE_NAME)": "",
+    "  const cachedResponse = await cache.match(request)": "",
+    
+    "  if (cachedResponse) {": "",
+      "    return cachedResponse": "",
+    "  }": "",
+    
+    "  try {": "",
+      "    const networkResponse = await fetch(request)": "",
+      "    if (networkResponse.ok) {": "",
+        "      cache.put(request, networkResponse.clone())": "",
+      "    }": "",
+      "    return networkResponse": "",
+    "  } catch (error) {": "",
+      "    // Image placeholder en cas d'erreur": "",
+      "    return caches.match('/assets/images/placeholder.png')": "",
+  "  }": "",
+  "}": "",
+  
+  "// Gestion par défaut (Stale-while-revalidate)": "",
+  "async function handleDefaultRequest(request) {": "",
+    "  const cache = await caches.open(CACHE_NAME)": "",
+    "  const cachedResponse = await cache.match(request)": "",
+    
+    "  // Retourner immédiatement depuis le cache si disponible": "",
+    "  if (cachedResponse) {": "",
+      "    // Mettre à jour en arrière-plan": "",
+      "    fetch(request).then((response) => {": "",
+        "      if (response.ok) {": "",
+          "        cache.put(request, response)": "",
+        "      }": "",
+      "    }).catch(() => {": "",
+        "      // Ignorer les erreurs de mise à jour en arrière-plan": "",
+      "    })": "",
+      
+      "    return cachedResponse": "",
+    "  }": "",
+    
+    "  // Si pas de cache, essayer le réseau": "",
+    "  try {": "",
+      "    const networkResponse = await fetch(request)": "",
+      "    if (networkResponse.ok) {": "",
+        "      cache.put(request, networkResponse.clone())": "",
+      "    }": "",
+      "    return networkResponse": "",
+    "  } catch (error) {": "",
+      "    // Fallback vers page offline pour les pages HTML": "",
+      "    if (request.destination === 'document') {": "",
+        "      return caches.match('/offline')": "",
+      "    }": "",
+      "    throw error": "",
+  "  }": "",
+  "}": "",
+  
+  "// Gestion des messages de l'application": "",
+  "self.addEventListener('message', (event) => {": "",
+    "  if (event.data && event.data.type === 'SKIP_WAITING') {": "",
+      "    self.skipWaiting()": "",
+    "  }": "",
+    
+    "  if (event.data && event.data.type === 'CACHE_PHOTOS') {": "",
+      "    // Pré-cache des photos importantes": "",
+      "    const photos = event.data.photos || []": "",
+      "    cachePhotos(photos)": "",
+    "  }": "",
+    
+    "  if (event.data && event.data.type === 'CLEAR_CACHE') {": "",
+      "    // Nettoyage du cache sur demande": "",
+      "    clearAllCaches()": "",
+    "  }": "",
+  "})": "",
+  
+  "// Fonctions utilitaires": "",
+  "async function cachePhotos(photoUrls) {": "",
+    "  const cache = await caches.open(PHOTOS_CACHE_NAME)": "",
+    "  return Promise.all(": "",
+      "    photoUrls.map(url => ": "",
+        "      fetch(url).then(response => {": "",
+          "        if (response.ok) {": "",
+            "          return cache.put(url, response)": "",
+          "        }": "",
+        "      }).catch(() => {": "",
+          "        // Ignorer les erreurs individuelles": "",
+        "      })": "",
+      "    )": "",
+    "  )": "",
+  "}": "",
+  
+  "async function clearAllCaches() {": "",
+    "  const cacheNames = await caches.keys()": "",
+    "  return Promise.all(": "",
+      "    cacheNames.map(cacheName => {": "",
+        "      if (cacheName.startsWith('micro-creche-')) {": "",
+          "        return caches.delete(cacheName)": "",
+        "      }": "",
+      "    })": "",
+    "  )": "",
+  "}": "",
+  
+  "// Gestion des notifications push (si implémentées)": "",
+  "self.addEventListener('push', (event) => {": "",
+    "  if (!event.data) return": "",
+    
+    "  const data = event.data.json()": "",
+    "  const options = {": "",
+      "    body: data.body": "",
+      "    icon: '/assets/icons/icon-192x192.png'": "",
+      "    badge: '/assets/icons/badge-72x72.png'": "",
+      "    vibrate: [200, 100, 200]": "",
+      "    data: data.data": "",
+      "    actions: data.actions || []": "",
+    "  }": "",
+    
+    "  event.waitUntil(": "",
+      "    self.registration.showNotification(data.title, options)": "",
+    "  )": "",
+  "})": "",
+  
+  "// Gestion des clics sur notifications": "",
+  "self.addEventListener('notificationclick', (event) => {": "",
+    "  event.notification.close()": "",
+    
+    "  const urlToOpen = event.notification.data?.url || '/'": "",
+    
+    "  event.waitUntil(": "",
+      "    clients.matchAll({ type: 'window' }).then((clientList) => {": "",
+        "      // Si une fenêtre est déjà ouverte, la focuser": "",
+        "      for (const client of clientList) {": "",
+          "        if (client.url === urlToOpen && 'focus' in client) {": "",
+            "          return client.focus()": "",
+          "        }": "",
+        "      }": "",
+        "      // Sinon, ouvrir une nouvelle fenêtre": "",
+        "      if (clients.openWindow) {": "",
+          "        return clients.openWindow(urlToOpen)": "",
+        "      }": "",
+      "    })": "",
+    "  )": "",
+  "})": ""
+}

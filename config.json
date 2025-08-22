@@ -1,0 +1,123 @@
+{
+  "comment": "Configuration ESLint - .eslintrc.json",
+  "root": true,
+  "ignorePatterns": [
+    "projects/**/*",
+    "dist/**/*",
+    "node_modules/**/*"
+  ],
+  "overrides": [
+    {
+      "files": ["*.ts"],
+      "extends": [
+        "eslint:recommended",
+        "@typescript-eslint/recommended",
+        "@angular-eslint/recommended",
+        "@angular-eslint/template/process-inline-templates"
+      ],
+      "rules": {
+        "@angular-eslint/directive-selector": [
+          "error",
+          {
+            "type": "attribute",
+            "prefix": "app",
+            "style": "camelCase"
+          }
+        ],
+        "@angular-eslint/component-selector": [
+          "error",
+          {
+            "type": "element",
+            "prefix": "app",
+            "style": "kebab-case"
+          }
+        ],
+        "@typescript-eslint/no-unused-vars": "error",
+        "@typescript-eslint/no-explicit-any": "warn",
+        "@typescript-eslint/prefer-readonly": "error",
+        "@typescript-eslint/explicit-function-return-type": "off",
+        "prefer-const": "error",
+        "no-console": "warn"
+      }
+    },
+    {
+      "files": ["*.html"],
+      "extends": ["@angular-eslint/template/recommended"],
+      "rules": {}
+    }
+  ]
+}
+
+{
+  "comment": "Configuration Prettier - .prettierrc.json",
+  "semi": true,
+  "trailingComma": "es5",
+  "singleQuote": true,
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "bracketSpacing": true,
+  "bracketSameLine": false,
+  "arrowParens": "avoid",
+  "endOfLine": "lf",
+  "overrides": [
+    {
+      "files": "*.html",
+      "options": {
+        "parser": "angular",
+        "printWidth": 120
+      }
+    },
+    {
+      "files": "*.css",
+      "options": {
+        "printWidth": 120
+      }
+    }
+  ]
+}
+
+{
+  "comment": "Configuration Karma - karma.conf.js format JSON pour référence",
+  "frameworks": ["jasmine", "@angular-devkit/build-angular"],
+  "plugins": [
+    "karma-jasmine",
+    "karma-chrome-headless",
+    "karma-jasmine-html-reporter",
+    "karma-coverage",
+    "@angular-devkit/build-angular/plugins/karma"
+  ],
+  "client": {
+    "jasmine": {
+      "random": true,
+      "seed": "4321",
+      "oneFailurePerSpec": true,
+      "failFast": true,
+      "timeoutInterval": 1000
+    },
+    "clearContext": false
+  },
+  "jasmineHtmlReporter": {
+    "suppressAll": true
+  },
+  "coverageReporter": {
+    "dir": "coverage/",
+    "subdir": ".",
+    "reporters": [
+      { "type": "html" },
+      { "type": "text-summary" },
+      { "type": "lcov" }
+    ],
+    "check": {
+      "global": {
+        "statements": 80,
+        "branches": 70,
+        "functions": 80,
+        "lines": 80
+      }
+    }
+  },
+  "reporters": ["progress", "kjhtml", "coverage"],
+  "browsers": ["Chrome"],
+  "restartOnFileChange": true
+}
