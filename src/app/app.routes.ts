@@ -20,6 +20,12 @@ export const routes: Routes = [
     canActivate: [publicGuard],
     title: 'Connexion - Micro-Crèche'
   },
+  {
+    path: 'auth-diagnostic',
+    loadComponent: () => import('./features/auth/auth-diagnostic/auth-diagnostic.component')
+      .then(m => m.AuthDiagnosticComponent),
+    title: 'Diagnostic Auth'
+  },
 
   // ===================
   // Routes protégées

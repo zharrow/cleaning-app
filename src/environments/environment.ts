@@ -14,7 +14,7 @@ export const environment = {
   // ===================
   // API Configuration
   // ===================
-  apiUrl: 'http://localhost:8000/api',
+  apiUrl: 'http://localhost:8000',
   apiTimeout: 30000, // 30 secondes
   
   // ===================

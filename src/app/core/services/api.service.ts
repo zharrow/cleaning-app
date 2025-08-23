@@ -207,7 +207,7 @@ export class ApiService {
       const token = await this.authService.getToken();
       if (!token) return [];
       
-      const response = await this.httpGet<TaskTemplate[]>('/tasks/templates', {
+      const response = await this.httpGet<TaskTemplate[]>('/tasks', {
         headers: { Authorization: `Bearer ${token}` }
       });
       return response.data;
@@ -330,7 +330,7 @@ export class ApiService {
     const token = await this.authService.getToken();
     if (!token) throw new Error('Non authentifié');
     
-    const response = await this.httpPost<TaskTemplate>('/tasks/templates', template, {
+    const response = await this.httpPost<TaskTemplate>('/tasks', template, {
       headers: { Authorization: `Bearer ${token}` }
     });
     

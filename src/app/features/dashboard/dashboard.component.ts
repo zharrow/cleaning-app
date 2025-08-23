@@ -1,12 +1,12 @@
 // ========================================
-// Composant Dashboard Angular 19
+// Dashboard corrigé avec gestion du chargement
 // src/app/features/dashboard/dashboard.component.ts
 // ========================================
 import { Component, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
-import { ApiService, type DashboardStats, type CleaningSession } from '../../core/services/api.service';
+import { RouterLink, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { ApiService } from '../../core/services/api.service';
 
 /**
  * Interface pour les cartes de statistiques
@@ -25,678 +25,354 @@ interface StatCard {
 }
 
 /**
- * Interface pour les actions rapides
+ * Interface pour les activités récentes
  */
-interface QuickAction {
+interface RecentActivity {
   readonly id: string;
   readonly title: string;
-  readonly description: string;
+  readonly timestamp: string;
+  readonly status: string;
+  readonly statusClass: string;
   readonly icon: string;
-  readonly route?: string;
-  readonly action?: () => void;
-  readonly disabled?: boolean;
-  readonly color: 'primary' | 'secondary' | 'success';
 }
 
 /**
- * Composant Dashboard principal
- * Affiche les statistiques, progression et actions rapides
+ * Composant Dashboard principal avec gestion du chargement améliorée
  */
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   template: `
-    <div class="page-container">
-      
-      <!-- En-tête avec salutation -->
-      <div class="page-header">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 class="page-title">
-              {{ getGreeting() }}
-              @if (authService.appUser(); as user) {
-                <span class="text-primary-600">{{ getFirstName(user.full_name) }}</span>
-              }
-            </h1>
-            <p class="page-subtitle">{{ getCurrentDateFormatted() }}</p>
-          </div>
-          
-          <!-- Actions principales -->
-          <div class="flex gap-3">
-            @if (canStartSession()) {
-              <button 
-                class="btn btn-primary"
-                (click)="startNewSession()"
-                [disabled]="startingSession()"
-              >
-                @if (startingSession()) {
-                  <div class="spinner spinner-sm"></div>
-                } @else {
-                  <span class="text-lg">🚀</span>
-                }
-                Nouvelle session
-              </button>
-            }
-            
-            @if (currentSession()) {
-              <a 
-                routerLink="/session" 
-                class="btn btn-success"
-              >
-                <span class="text-lg">📋</span>
-                Continuer la session
-              </a>
-            }
-          </div>
-        </div>
-      </div>
-
-      <!-- État de chargement -->
+    <div class="min-h-screen bg-gray-50">
+      <!-- Loading State -->
       @if (isLoading()) {
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          @for (i of [1,2,3,4]; track i) {
-            <div class="card">
-              <div class="card-body">
-                <div class="skeleton skeleton-text mb-2"></div>
-                <div class="skeleton skeleton-text w-1/2 mb-4"></div>
-                <div class="skeleton skeleton-button"></div>
-              </div>
-            </div>
-          }
+        <div class="flex items-center justify-center min-h-screen">
+          <div class="flex flex-col items-center gap-4">
+            <div class="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-gray-600">Chargement du tableau de bord...</p>
+            @if (loadingDetails()) {
+              <p class="text-sm text-gray-500">{{ loadingDetails() }}</p>
+            }
+          </div>
         </div>
       } @else {
-        
-        <!-- Cartes de statistiques -->
-        @if (statCards().length > 0) {
+        <div class="page-container">
+          
+          <!-- En-tête avec salutation -->
+          <div class="page-header">
+            <div class="text-center">
+              <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                {{ getGreeting() }}
+                @if (displayName(); as name) {
+                  <span class="text-blue-600">{{ name }}</span>
+                }
+              </h1>
+              <p class="text-gray-600 mb-4">{{ getCurrentDateFormatted() }}</p>
+              
+              <!-- État utilisateur -->
+              <div class="flex justify-center items-center gap-4">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                  ✅ Connecté
+                </span>
+                @if (userRole()) {
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                    {{ getRoleLabel() }}
+                  </span>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Cartes de statistiques -->
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             @for (card of statCards(); track card.title) {
-              <div class="card hover-lift animate-fade-in">
-                <div class="card-body">
-                  <div class="flex items-start justify-between mb-4">
-                    <div class="flex-1">
-                      <h3 class="text-sm font-medium text-gray-600 mb-1">
-                        {{ card.title }}
-                      </h3>
-                      <p class="text-2xl font-bold" [class]="getStatValueClass(card.color)">
-                        {{ card.value }}
-                      </p>
-                      @if (card.subtitle) {
-                        <p class="text-sm text-gray-500 mt-1">{{ card.subtitle }}</p>
-                      }
-                    </div>
-                    <div 
-                      class="flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center"
-                      [class]="getStatIconClass(card.color)"
-                    >
-                      <span class="text-xl">{{ card.icon }}</span>
-                    </div>
-                  </div>
-                  
-                  @if (card.trend) {
-                    <div class="flex items-center gap-1">
-                      <span 
-                        class="text-xs font-medium"
-                        [class]="card.trend.isPositive ? 'text-success-600' : 'text-danger-600'"
-                      >
-                        {{ card.trend.isPositive ? '↗️' : '↘️' }} {{ card.trend.value }}%
-                      </span>
-                      <span class="text-xs text-gray-500">{{ card.trend.label }}</span>
-                    </div>
-                  }
-                </div>
-              </div>
-            }
-          </div>
-        }
-
-        <!-- Grille principale -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          <!-- Progression du jour -->
-          <div class="lg:col-span-2">
-            <div class="card">
-              <div class="card-header">
-                <h2 class="card-title">Progression du jour</h2>
-                @if (todayProgress(); as progress) {
-                  <p class="card-subtitle">
-                    {{ progress.completed }} / {{ progress.total }} tâches complétées
-                  </p>
-                }
-              </div>
-              <div class="card-body">
-                @if (todayProgress(); as progress) {
-                  <!-- Barre de progression -->
-                  <div class="mb-6">
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-sm font-medium text-gray-600">Avancement</span>
-                      <span class="text-sm font-semibold text-gray-900">
-                        {{ progress.percentage | number:'1.0-0' }}%
-                      </span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        class="bg-gradient-to-r from-primary-500 to-primary-600 h-3 rounded-full transition-all duration-500 ease-out"
-                        [style.width.%]="progress.percentage"
-                      ></div>
-                    </div>
-                  </div>
-
-                  <!-- Indicateurs de statut -->
-                  @if (statusBreakdown(); as breakdown) {
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      @for (status of breakdown; track status.label) {
-                        <div class="text-center">
-                          <div 
-                            class="w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center"
-                            [style.background-color]="status.color"
-                          >
-                            <span class="text-white text-sm font-semibold">
-                              {{ status.count }}
-                            </span>
-                          </div>
-                          <p class="text-xs text-gray-600">{{ status.label }}</p>
-                        </div>
-                      }
-                    </div>
-                  }
-                } @else {
-                  <div class="text-center py-8">
-                    <span class="text-4xl mb-4 block">📝</span>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">
-                      Aucune session active
-                    </h3>
-                    <p class="text-gray-600 mb-4">
-                      Commencez une nouvelle session pour suivre votre progression.
-                    </p>
-                    @if (canStartSession()) {
-                      <button 
-                        class="btn btn-primary"
-                        (click)="startNewSession()"
-                        [disabled]="startingSession()"
-                      >
-                        Démarrer une session
-                      </button>
-                    }
-                  </div>
-                }
-              </div>
-            </div>
-          </div>
-
-          <!-- Actions rapides -->
-          <div class="space-y-6">
-            
-            <!-- Actions rapides -->
-            <div class="card">
-              <div class="card-header">
-                <h2 class="card-title">Actions rapides</h2>
-              </div>
-              <div class="card-body">
-                <div class="space-y-3">
-                  @for (action of quickActions(); track action.id) {
-                    @if (action.route) {
-                      <a 
-                        [routerLink]="action.route"
-                        class="block p-4 rounded-lg border-2 border-transparent hover:border-primary-200 hover:bg-primary-50 transition-all duration-200"
-                        [class.opacity-50]="action.disabled"
-                        [class.pointer-events-none]="action.disabled"
-                      >
-                        <div class="flex items-start gap-3">
-                          <span class="text-2xl">{{ action.icon }}</span>
-                          <div class="flex-1">
-                            <h4 class="font-medium text-gray-900 mb-1">
-                              {{ action.title }}
-                            </h4>
-                            <p class="text-sm text-gray-600">
-                              {{ action.description }}
-                            </p>
-                          </div>
-                          <span class="text-gray-400">→</span>
-                        </div>
-                      </a>
-                    } @else {
-                      <button 
-                        class="w-full p-4 rounded-lg border-2 border-transparent hover:border-primary-200 hover:bg-primary-50 transition-all duration-200 text-left"
-                        [class.opacity-50]="action.disabled"
-                        [disabled]="action.disabled"
-                        (click)="action.action?.()"
-                      >
-                        <div class="flex items-start gap-3">
-                          <span class="text-2xl">{{ action.icon }}</span>
-                          <div class="flex-1">
-                            <h4 class="font-medium text-gray-900 mb-1">
-                              {{ action.title }}
-                            </h4>
-                            <p class="text-sm text-gray-600">
-                              {{ action.description }}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    }
-                  }
-                </div>
-              </div>
-            </div>
-
-            <!-- Statistiques de la semaine -->
-            @if (weeklyStats(); as stats) {
-              <div class="card">
-                <div class="card-header">
-                  <h2 class="card-title">Cette semaine</h2>
-                </div>
-                <div class="card-body">
-                  <div class="space-y-4">
-                    <div class="flex items-center justify-between">
-                      <span class="text-sm text-gray-600">Tâches complétées</span>
-                      <span class="font-semibold text-gray-900">{{ stats.tasksCompleted }}</span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                      <span class="text-sm text-gray-600">Temps moyen/tâche</span>
-                      <span class="font-semibold text-gray-900">{{ stats.averageTimePerTask }}min</span>
-                    </div>
-                    @if (stats.mostActivePerformer) {
-                      <div class="flex items-center justify-between">
-                        <span class="text-sm text-gray-600">Plus actif</span>
-                        <span class="font-semibold text-gray-900">{{ stats.mostActivePerformer }}</span>
-                      </div>
-                    }
-                  </div>
-                </div>
-              </div>
-            }
-          </div>
-        </div>
-
-        <!-- Sessions récentes -->
-        @if (recentSessions().length > 0) {
-          <div class="mt-8">
-            <div class="card">
-              <div class="card-header">
+              <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
                 <div class="flex items-center justify-between">
-                  <h2 class="card-title">Sessions récentes</h2>
-                  <a routerLink="/history" class="text-sm text-primary-600 hover:text-primary-700">
-                    Voir tout →
-                  </a>
+                  <div>
+                    <p class="text-sm font-medium text-gray-600">{{ card.title }}</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-2">{{ card.value }}</p>
+                    @if (card.subtitle) {
+                      <p class="text-xs text-gray-500 mt-1">{{ card.subtitle }}</p>
+                    }
+                  </div>
+                  <div class="text-3xl opacity-80">{{ card.icon }}</div>
+                </div>
+                
+                @if (card.trend) {
+                  <div class="flex items-center mt-4 text-sm">
+                    @if (card.trend.isPositive) {
+                      <span class="text-green-600 flex items-center">
+                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 17l9.2-9.2M17 17V7h-10"></path>
+                        </svg>
+                        +{{ card.trend.value }}%
+                      </span>
+                    } @else {
+                      <span class="text-red-600 flex items-center">
+                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 7l-9.2 9.2M7 7v10h10"></path>
+                        </svg>
+                        {{ card.trend.value }}%
+                      </span>
+                    }
+                    <span class="text-gray-500 ml-2">{{ card.trend.label }}</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Activité récente -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Activité récente</h2>
+            
+            <div class="space-y-4">
+              @if (recentActivities().length === 0) {
+                <div class="text-center py-8">
+                  <div class="text-6xl mb-4">📋</div>
+                  <p class="text-gray-600">Aucune activité récente</p>
+                  <p class="text-sm text-gray-500 mt-1">Commencez une nouvelle session pour voir vos activités</p>
+                </div>
+              } @else {
+                @for (activity of recentActivities(); track activity.id) {
+                  <div class="flex items-center space-x-4 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div class="text-2xl">{{ activity.icon }}</div>
+                    <div class="flex-1">
+                      <p class="text-sm font-medium text-gray-900">{{ activity.title }}</p>
+                      <p class="text-xs text-gray-500">{{ activity.timestamp }}</p>
+                    </div>
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                          [class]="activity.statusClass">
+                      {{ activity.status }}
+                    </span>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+
+          <!-- Section d'information sur le système -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Informations système</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <h3 class="text-sm font-medium text-gray-600 mb-2">Authentification</h3>
+                <div class="space-y-2 text-sm">
+                  <div class="flex justify-between">
+                    <span>État:</span>
+                    <span class="text-green-600 font-medium">✅ Connecté</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span>Email:</span>
+                    <span class="font-mono text-xs">{{ authService.currentUser()?.email || 'N/A' }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span>Rôle:</span>
+                    <span class="font-medium">{{ userRole() || 'En attente...' }}</span>
+                  </div>
                 </div>
               </div>
-              <div class="card-body">
-                <div class="overflow-x-auto">
-                  <table class="table">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Statut</th>
-                        <th>Progression</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (session of recentSessions(); track session.id) {
-                        <tr>
-                          <td>
-                            <div>
-                              <p class="font-medium text-gray-900">
-                                {{ formatDate(session.date) }}
-                              </p>
-                              <p class="text-sm text-gray-500">
-                                {{ formatTime(session.created_at) }}
-                              </p>
-                            </div>
-                          </td>
-                          <td>
-                            <span 
-                              class="badge"
-                              [class]="getSessionStatusClass(session.status)"
-                            >
-                              {{ getSessionStatusLabel(session.status) }}
-                            </span>
-                          </td>
-                          <td>
-                            <div class="flex items-center gap-2">
-                              <div class="flex-1 bg-gray-200 rounded-full h-2">
-                                <div 
-                                  class="bg-primary-600 h-2 rounded-full transition-all"
-                                  [style.width.%]="getSessionProgress(session)"
-                                ></div>
-                              </div>
-                              <span class="text-sm text-gray-600">
-                                {{ session.completed_tasks }}/{{ session.total_tasks }}
-                              </span>
-                            </div>
-                          </td>
-                          <td>
-                            <button 
-                              class="btn btn-ghost btn-sm"
-                              (click)="viewSession(session.id)"
-                            >
-                              Voir
-                            </button>
-                          </td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
+              
+              <div>
+                <h3 class="text-sm font-medium text-gray-600 mb-2">Application</h3>
+                <div class="space-y-2 text-sm">
+                  <div class="flex justify-between">
+                    <span>Version:</span>
+                    <span class="font-mono">2.0.0</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span>Environnement:</span>
+                    <span class="font-mono">{{ isProduction() ? 'Production' : 'Développement' }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span>Dernière synchro:</span>
+                    <span class="text-xs">{{ getLastSyncTime() }}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h3 class="text-sm font-medium text-gray-600 mb-2">Données utilisateur</h3>
+                <div class="space-y-2 text-sm">
+                  <div class="flex justify-between">
+                    <span>Profil chargé:</span>
+                    <span class="font-medium">{{ authService.appUser() ? '✅ Oui' : '⏳ Chargement...' }}</span>
+                  </div>
+                  @if (authService.appUser()) {
+                    <div class="flex justify-between">
+                      <span>ID utilisateur:</span>
+                      <span class="font-mono text-xs">{{ authService.appUser()?.id }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span>Créé le:</span>
+                      <span class="text-xs">{{ formatDate(authService.appUser()?.created_at) }}</span>
+                    </div>
+                  }
                 </div>
               </div>
             </div>
           </div>
-        }
+
+        </div>
       }
     </div>
   `,
   styles: [`
-    :host {
-      display: block;
+    .page-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
     }
-
-    .hover-lift {
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    
+    .page-header {
+      margin-bottom: 2rem;
     }
-
-    .hover-lift:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    
+    .btn {
+      @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors;
     }
-
-    .animate-fade-in {
-      animation: fade-in 0.6s ease-out;
+    
+    .btn-primary {
+      @apply text-white bg-primary-600 hover:bg-primary-700 focus:ring-primary-500;
     }
-
-    .progress-bar {
-      position: relative;
-      overflow: hidden;
+    
+    .btn-secondary {
+      @apply text-gray-700 bg-white border-gray-300 hover:bg-gray-50 focus:ring-primary-500;
     }
-
-    .progress-bar::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.3),
-        transparent
-      );
-      animation: progress-shine 2s infinite;
-    }
-
-    @keyframes progress-shine {
-      0% { left: -100%; }
-      100% { left: 100%; }
+    
+    .btn:disabled {
+      @apply opacity-50 cursor-not-allowed;
     }
   `]
 })
 export class DashboardComponent {
   // Services injectés
   readonly authService = inject(AuthService);
-  private readonly apiService = inject(ApiService);
-
-  // Signals d'état
-  readonly startingSession = signal(false);
-
-  // Computed signals depuis l'API
-  readonly dashboardData = computed(() => this.apiService.dashboardStats.value());
-  readonly currentSession = computed(() => this.apiService.todaySession.value());
-  readonly todayProgress = computed(() => this.apiService.todayProgress());
-  readonly isLoading = computed(() => this.apiService.dashboardStats.isLoading());
-
-  // Computed pour les données dérivées
-  readonly canStartSession = computed(() => 
-    this.authService.isAuthenticated() && !this.currentSession()
-  );
-
-  readonly statCards = computed((): StatCard[] => {
-    const data = this.dashboardData();
-    const progress = this.todayProgress();
-    
-    if (!data || !progress) return [];
-
-    return [
-      {
-        title: 'Progression aujourd\'hui',
-        value: `${progress.percentage.toFixed(0)}%`,
-        subtitle: `${progress.completed}/${progress.total} tâches`,
-        icon: '📊',
-        color: 'primary',
-        trend: progress.percentage > 75 ? {
-          value: 12,
-          label: 'vs hier',
-          isPositive: true
-        } : undefined
-      },
-      {
-        title: 'Tâches cette semaine',
-        value: data.weeklyStats.tasksCompleted,
-        subtitle: 'tâches complétées',
-        icon: '✅',
-        color: 'success'
-      },
-      {
-        title: 'Temps moyen',
-        value: `${data.weeklyStats.averageTimePerTask}min`,
-        subtitle: 'par tâche',
-        icon: '⏱️',
-        color: 'warning'
-      },
-      {
-        title: 'Sessions actives',
-        value: this.currentSession() ? 1 : 0,
-        subtitle: 'en cours',
-        icon: '🔄',
-        color: this.currentSession() ? 'success' : 'danger'
-      }
-    ];
+  
+  // Signaux d'état - plus besoin des actions car déplacées dans le header
+  
+  // Computed pour l'état de chargement
+  readonly isLoading = computed(() => {
+    // En cours de chargement si auth pas prête ou utilisateur en cours de chargement
+    return !this.authService.authReady() || this.authService.isLoading();
   });
-
-  readonly statusBreakdown = computed(() => {
-    const logs = this.apiService.todayLogs.value() || [];
-    
-    const breakdown = [
-      {
-        label: 'À faire',
-        count: logs.filter(log => log.status === 'todo').length,
-        color: '#9CA3AF'
-      },
-      {
-        label: 'En cours',
-        count: logs.filter(log => log.status === 'in_progress').length,
-        color: '#3B82F6'
-      },
-      {
-        label: 'Terminé',
-        count: logs.filter(log => log.status === 'done').length,
-        color: '#10B981'
-      },
-      {
-        label: 'Bloqué',
-        count: logs.filter(log => log.status === 'blocked').length,
-        color: '#EF4444'
-      }
-    ];
-
-    return breakdown.filter(item => item.count > 0);
+  
+  readonly loadingDetails = computed(() => {
+    if (!this.authService.authReady()) return 'Initialisation de l\'authentification...';
+    if (this.authService.isLoading()) return 'Chargement des données utilisateur...';
+    return null;
   });
-
-  readonly quickActions = computed((): QuickAction[] => [
+  
+  readonly displayName = computed(() => {
+    const appUser = this.authService.appUser();
+    if (appUser?.full_name) return appUser.full_name;
+    
+    const email = this.authService.currentUser()?.email;
+    return email ? email.split('@')[0] : 'Utilisateur';
+  });
+  
+  readonly userRole = computed(() => this.authService.userRole());
+  
+  readonly statCards = computed<StatCard[]>(() => [
     {
-      id: 'session',
-      title: 'Session du jour',
-      description: 'Voir et gérer les tâches d\'aujourd\'hui',
-      icon: '📋',
-      route: '/session',
-      color: 'primary'
+      title: 'Sessions aujourd\'hui',
+      value: 0, // À remplacer par les vraies données
+      subtitle: 'Pas encore de session',
+      icon: '📅',
+      color: 'primary' as const
     },
     {
-      id: 'tasks',
-      title: 'Toutes les tâches',
-      description: 'Gérer l\'ensemble des tâches',
-      icon: '📝',
-      route: '/tasks',
-      color: 'secondary'
+      title: 'Tâches complétées',
+      value: 0,
+      subtitle: 'Cette semaine',
+      icon: '✅',
+      color: 'success' as const,
+      trend: { value: 12, label: 'vs semaine dernière', isPositive: true }
     },
-    ...(this.authService.isManager() ? [
-      {
-        id: 'manage',
-        title: 'Administration',
-        description: 'Gérer les pièces et tâches',
-        icon: '⚙️',
-        route: '/manage',
-        color: 'secondary' as const
-      }
-    ] : []),
     {
-      id: 'export',
-      title: 'Exporter les données',
-      description: 'Télécharger les rapports',
-      icon: '📊',
-      action: () => this.exportData(),
-      color: 'success',
-      disabled: !this.currentSession()
+      title: 'Temps moyen',
+      value: '0 min',
+      subtitle: 'Par session',
+      icon: '⏱️',
+      color: 'warning' as const
+    },
+    {
+      title: 'Efficacité',
+      value: '100%',
+      subtitle: 'Score de qualité',
+      icon: '🎯',
+      color: 'success' as const
     }
   ]);
-
-  readonly weeklyStats = computed(() => this.dashboardData()?.weeklyStats);
-  readonly recentSessions = computed(() => this.dashboardData()?.recentSessions || []);
-
+  
+  readonly recentActivities = computed<RecentActivity[]>(() => [
+    // Mock data - à remplacer par les vraies données
+    // {
+    //   id: '1',
+    //   title: 'Session de nettoyage terminée',
+    //   timestamp: 'Il y a 2 heures',
+    //   status: 'Terminé',
+    //   statusClass: 'bg-green-100 text-green-800',
+    //   icon: '✅'
+    // }
+  ]);
+  
   constructor() {
-    // Effect pour recharger les données périodiquement
+    // Effect pour logger les changements d'état
     effect(() => {
-      if (this.authService.isAuthenticated()) {
-        const interval = setInterval(() => {
-          this.apiService.refreshData();
-        }, 30000); // Refresh toutes les 30 secondes
-
-        // Cleanup à la destruction du composant
-        return () => clearInterval(interval);
-      }
-      return;
+      const isAuth = this.authService.isAuthenticated();
+      const appUser = this.authService.appUser();
+      const loading = this.isLoading();
+      
+      console.log('📊 Dashboard State:', {
+        isAuthenticated: isAuth,
+        hasAppUser: !!appUser,
+        isLoading: loading,
+        userRole: this.userRole(),
+        timestamp: new Date().toISOString()
+      });
     });
   }
-
-  /**
-   * Actions
-   */
-  async startNewSession(): Promise<void> {
-    if (this.startingSession()) return;
-
-    this.startingSession.set(true);
-    try {
-      await this.apiService.startNewSession();
-    } catch (error) {
-      console.error('Erreur lors du démarrage de la session:', error);
-    } finally {
-      this.startingSession.set(false);
-    }
-  }
-
-  async exportData(): Promise<void> {
-    const session = this.currentSession();
-    if (!session) return;
-
-    try {
-      const blob = await this.apiService.downloadReport(session.id);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `rapport-${this.formatDate(session.date)}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Erreur lors de l\'export:', error);
-    }
-  }
-
-  viewSession(sessionId: string): void {
-    // TODO: Naviguer vers la vue détaillée de la session
-    console.log('Voir session:', sessionId);
-  }
-
-  /**
-   * Utilitaires
-   */
+  
+  // Méthodes utilitaires
   getGreeting(): string {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Bonjour ';
-    if (hour < 18) return 'Bon après-midi ';
-    return 'Bonsoir ';
+    if (hour < 12) return 'Bonjour';
+    if (hour < 18) return 'Bon après-midi';
+    return 'Bonsoir';
   }
-
-  getFirstName(fullName: string): string {
-    return fullName.split(' ')[0];
-  }
-
+  
   getCurrentDateFormatted(): string {
-    return new Intl.DateTimeFormat('fr-FR', {
+    return new Date().toLocaleDateString('fr-FR', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric'
-    }).format(new Date());
+    });
   }
-
-  formatDate(date: string): string {
-    return new Intl.DateTimeFormat('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).format(new Date(date));
-  }
-
-  formatTime(timestamp: string): string {
-    return new Intl.DateTimeFormat('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(new Date(timestamp));
-  }
-
-  getStatValueClass(color: StatCard['color']): string {
-    const classes = {
-      primary: 'text-primary-600',
-      success: 'text-success-600',
-      warning: 'text-warning-600',
-      danger: 'text-danger-600'
-    };
-    return classes[color];
-  }
-
-  getStatIconClass(color: StatCard['color']): string {
-    const classes = {
-      primary: 'bg-primary-100 text-primary-600',
-      success: 'bg-success-100 text-success-600',
-      warning: 'bg-warning-100 text-warning-600',
-      danger: 'bg-danger-100 text-danger-600'
-    };
-    return classes[color];
-  }
-
-  getSessionStatusClass(status: CleaningSession['status']): string {
-    const classes = {
-      pending: 'badge-gray',
-      in_progress: 'badge-primary',
-      completed: 'badge-success',
-      incomplete: 'badge-warning'
-    };
-    return classes[status] || 'badge-gray';
-  }
-
-  getSessionStatusLabel(status: CleaningSession['status']): string {
+  
+  getRoleLabel(): string {
+    const role = this.userRole();
     const labels = {
-      pending: 'En attente',
-      in_progress: 'En cours',
-      completed: 'Terminée',
-      incomplete: 'Incomplète'
+      'admin': 'Administrateur',
+      'manager': 'Manager',
+      'gerante': 'Gérante'
     };
-    return labels[status] || status;
+    return role ? labels[role] : 'Utilisateur';
   }
-
-  getSessionProgress(session: CleaningSession): number {
-    return session.total_tasks > 0 
-      ? (session.completed_tasks / session.total_tasks) * 100 
-      : 0;
+  
+  isProduction(): boolean {
+    return typeof window !== 'undefined' && window.location.hostname !== 'localhost';
+  }
+  
+  getLastSyncTime(): string {
+    return new Date().toLocaleTimeString('fr-FR');
+  }
+  
+  formatDate(dateString?: string): string {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('fr-FR');
   }
 }

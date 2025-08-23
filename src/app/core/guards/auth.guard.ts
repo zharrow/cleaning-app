@@ -29,7 +29,6 @@ export const authGuard: CanActivateFn = () => {
 
 /**
  * Guard pour les pages publiques (login, etc.)
- * Redirige vers dashboard si déjà connecté
  */
 export const publicGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
@@ -196,12 +195,12 @@ export const requireUserDataGuard: CanActivateFn = () => {
   }
   
   // Vérifier que les données utilisateur sont chargées
-  if (!authService.appUser()) {
-    // Rediriger vers une page de chargement ou dashboard
-    return router.createUrlTree(['/dashboard'], {
-      queryParams: { loading: 'user_data' }
-    });
-  }
+  // if (!authService.appUser()) {
+  //   // Rediriger vers une page de chargement ou dashboard
+  //   return router.createUrlTree(['/dashboard'], {
+  //     queryParams: { loading: 'user_data' }
+  //   });
+  // }
   
   return true;
 };
