@@ -9,6 +9,15 @@ import { ApiService, type AssignedTask } from '../../../core/services/api.servic
 import { AuthService } from '../../../core/services/auth.service';
 
 /**
+ * Interface pour les filtres
+ */
+interface TaskListFilters {
+  room: string;
+  frequency: string;
+  category: string;
+}
+
+/**
  * Composant de liste des tâches
  * Affiche toutes les tâches assignées avec possibilité de filtrage
  */
@@ -95,7 +104,11 @@ import { AuthService } from '../../../core/services/auth.service';
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label class="form-label text-sm">Pièce</label>
-              <select class="form-input form-select" [(ngModel)]="filters.room">
+              <select 
+                class="form-input form-select" 
+                [value]="filters().room"
+                (change)="updateFilter('room', $event)"
+              >
                 <option value="">Toutes les pièces</option>
                 @for (room of availableRooms(); track room.id) {
                   <option [value]="room.id">{{ room.name }}</option>
@@ -105,7 +118,11 @@ import { AuthService } from '../../../core/services/auth.service';
             
             <div>
               <label class="form-label text-sm">Fréquence</label>
-              <select class="form-input form-select" [(ngModel)]="filters.frequency">
+              <select 
+                class="form-input form-select" 
+                [value]="filters().frequency"
+                (change)="updateFilter('frequency', $event)"
+              >
                 <option value="">Toutes</option>
                 <option value="daily">Quotidien</option>
                 <option value="weekly">Hebdomadaire</option>
@@ -115,7 +132,11 @@ import { AuthService } from '../../../core/services/auth.service';
             
             <div>
               <label class="form-label text-sm">Catégorie</label>
-              <select class="form-input form-select" [(ngModel)]="filters.category">
+              <select 
+                class="form-input form-select" 
+                [value]="filters().category"
+                (change)="updateFilter('category', $event)"
+              >
                 <option value="">Toutes</option>
                 @for (category of availableCategories(); track category) {
                   <option [value]="category">{{ category }}</option>
@@ -248,7 +269,7 @@ export class TaskListComponent {
   readonly authService = inject(AuthService);
 
   // Filtres
-  readonly filters = signal({
+  readonly filters = signal<TaskListFilters>({
     room: '',
     frequency: '',
     category: ''
@@ -328,6 +349,19 @@ export class TaskListComponent {
         .reduce((total, task) => total + task.task_template.estimated_duration, 0)
     })).sort((a, b) => a.roomName.localeCompare(b.roomName));
   });
+
+  /**
+   * Gestion des filtres
+   */
+  updateFilter(field: keyof TaskListFilters, event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const value = target.value;
+    
+    this.filters.update(filters => ({
+      ...filters,
+      [field]: value
+    }));
+  }
 
   /**
    * Actions

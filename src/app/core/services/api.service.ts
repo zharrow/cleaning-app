@@ -120,7 +120,7 @@ export class ApiService {
    */
   
   // Dashboard stats avec refresh automatique
-  readonly dashboardStats: ResourceRef<DashboardStats | null> = resource({
+  readonly dashboardStats: ResourceRef<DashboardStats | null | undefined> = resource({
     request: () => ({ trigger: this.refreshTrigger() }),
     loader: async () => {
       const token = await this.authService.getToken();
@@ -134,7 +134,7 @@ export class ApiService {
   });
   
   // Session du jour
-  readonly todaySession: ResourceRef<CleaningSession | null> = resource({
+  readonly todaySession: ResourceRef<CleaningSession | null | undefined> = resource({
     request: () => ({ trigger: this.refreshTrigger() }),
     loader: async () => {
       const token = await this.authService.getToken();
@@ -154,7 +154,7 @@ export class ApiService {
   });
   
   // Logs de la session du jour
-  readonly todayLogs: ResourceRef<CleaningLog[]> = resource({
+  readonly todayLogs: ResourceRef<CleaningLog[] | null | undefined> = resource({
     request: () => ({ 
       sessionId: this.todaySession.value()?.id,
       trigger: this.refreshTrigger() 
@@ -173,7 +173,7 @@ export class ApiService {
   });
   
   // Pièces
-  readonly rooms: ResourceRef<Room[]> = resource({
+  readonly rooms: ResourceRef<Room[] | null | undefined> = resource({
     request: () => ({ trigger: this.refreshTrigger() }),
     loader: async () => {
       const token = await this.authService.getToken();
@@ -187,7 +187,7 @@ export class ApiService {
   });
   
   // Tâches assignées
-  readonly assignedTasks: ResourceRef<AssignedTask[]> = resource({
+  readonly assignedTasks: ResourceRef<AssignedTask[] | null | undefined> = resource({
     request: () => ({ trigger: this.refreshTrigger() }),
     loader: async () => {
       const token = await this.authService.getToken();
@@ -201,7 +201,7 @@ export class ApiService {
   });
   
   // Templates de tâches
-  readonly taskTemplates: ResourceRef<TaskTemplate[]> = resource({
+  readonly taskTemplates: ResourceRef<TaskTemplate[] | null | undefined> = resource({
     request: () => ({ trigger: this.refreshTrigger() }),
     loader: async () => {
       const token = await this.authService.getToken();

@@ -204,15 +204,15 @@ import { RouterLink } from '@angular/router';
 })
 export class OfflineComponent implements OnInit, OnDestroy {
   // Signals d'état
-  private readonly isOnline = signal(navigator.onLine);
-  private readonly checkingConnection = signal(false);
-  private readonly lastOnline = signal<Date | null>(null);
-  private readonly cachedData = signal({
+  readonly isOnline = signal(navigator.onLine);
+  readonly checkingConnection = signal(false);
+  readonly lastOnline = signal<Date | null>(null);
+  readonly cachedData = signal({
     sessions: 5,
     tasks: 23,
     photos: 12
   });
-  private readonly pendingSync = signal([
+  readonly pendingSync = signal([
     {
       id: '1',
       type: 'task_validation',

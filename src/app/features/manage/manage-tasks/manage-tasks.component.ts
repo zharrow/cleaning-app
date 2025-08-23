@@ -1,11 +1,6 @@
-// ========================================
-// Composant Gestion des tâches Angular 19
-// src/app/features/manage/manage-tasks/manage-tasks.component.ts
-// ========================================
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { 
   ApiService, 
   type TaskTemplate, 
@@ -25,11 +20,11 @@ interface TaskTemplateForm {
 }
 
 interface TaskAssignmentForm {
-  readonly room_id: string;
-  readonly task_template_id: string;
-  readonly frequency: 'daily' | 'weekly' | 'monthly' | string;
-  readonly suggested_time: string;
-  readonly default_performer: string;
+  room_id: string;
+  task_template_id: string;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  suggested_time?: string;
+  default_performer?: string;
 }
 
 /**
@@ -51,10 +46,14 @@ interface AssignmentModal {
  * Interface pour les filtres
  */
 interface TaskFilters {
-  readonly category: string;
-  readonly room: string;
-  readonly frequency: string;
-  readonly status: 'all' | 'active' | 'inactive';
+  category: string;
+  room: string;
+  frequency: string;
+  status: 'all' | 'active' | 'inactive';
+}
+
+interface TemplateFilters {
+  category: string;
 }
 
 /**
@@ -64,7 +63,7 @@ interface TaskFilters {
 @Component({
   selector: 'app-manage-tasks',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   template: `
     <div class="page-container">
       
@@ -184,7 +183,8 @@ interface TaskFilters {
                 <label class="form-label text-sm">Catégorie</label>
                 <select 
                   class="form-input form-select"
-                  [(ngModel)]="templateFilters.category"
+                  [value]="templateFilters().category"
+                  (change)="updateTemplateFilter('category', $event)"
                 >
                   <option value="">Toutes les catégories</option>
                   @for (category of availableCategories(); track category) {
@@ -198,7 +198,8 @@ interface TaskFilters {
                 <input 
                   type="text"
                   class="form-input"
-                  [(ngModel)]="searchQuery"
+                  [value]="searchQuery()"
+                  (input)="updateSearchQuery($event)"
                   placeholder="Rechercher un modèle..."
                 />
               </div>
@@ -331,7 +332,8 @@ interface TaskFilters {
                 <label class="form-label text-sm">Pièce</label>
                 <select 
                   class="form-input form-select"
-                  [(ngModel)]="assignmentFilters.room"
+                  [value]="assignmentFilters().room"
+                  (change)="updateAssignmentFilter('room', $event)"
                 >
                   <option value="">Toutes les pièces</option>
                   @for (room of rooms(); track room.id) {
@@ -344,7 +346,8 @@ interface TaskFilters {
                 <label class="form-label text-sm">Fréquence</label>
                 <select 
                   class="form-input form-select"
-                  [(ngModel)]="assignmentFilters.frequency"
+                  [value]="assignmentFilters().frequency"
+                  (change)="updateAssignmentFilter('frequency', $event)"
                 >
                   <option value="">Toutes les fréquences</option>
                   <option value="daily">Quotidien</option>
@@ -357,7 +360,8 @@ interface TaskFilters {
                 <label class="form-label text-sm">Statut</label>
                 <select 
                   class="form-input form-select"
-                  [(ngModel)]="assignmentFilters.status"
+                  [value]="assignmentFilters().status"
+                  (change)="updateAssignmentFilter('status', $event)"
                 >
                   <option value="all">Tous</option>
                   <option value="active">Actif</option>
@@ -733,15 +737,15 @@ export class ManageTasksComponent {
   private readonly fb = inject(FormBuilder);
 
   // Signals d'état
-  private readonly currentTab = signal<'templates' | 'assignments'>('templates');
-  private readonly openMenuId = signal<string | null>(null);
-  private readonly savingTemplate = signal(false);
-  private readonly savingAssignment = signal(false);
-  private readonly togglingStatus = signal(new Set<string>());
-  private readonly searchQuery = signal('');
+  readonly currentTab = signal<'templates' | 'assignments'>('templates');
+  readonly openMenuId = signal<string | null>(null);
+  readonly savingTemplate = signal(false);
+  readonly savingAssignment = signal(false);
+  readonly togglingStatus = signal(new Set<string>());
+  readonly searchQuery = signal('');
 
-  // Filtres
-  readonly templateFilters = signal({ category: '' });
+  // Filtres - correction avec interfaces dédiées
+  readonly templateFilters = signal<TemplateFilters>({ category: '' });
   readonly assignmentFilters = signal<TaskFilters>({
     category: '',
     room: '',
@@ -874,6 +878,48 @@ export class ManageTasksComponent {
   }
 
   /**
+   * Gestion des filtres - Méthodes corrigées
+   */
+  updateTemplateFilter(field: keyof TemplateFilters, event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const value = target.value;
+    
+    this.templateFilters.update(filters => ({
+      ...filters,
+      [field]: value
+    }));
+  }
+
+  updateAssignmentFilter(field: keyof TaskFilters, event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const value = target.value;
+    
+    this.assignmentFilters.update(filters => ({
+      ...filters,
+      [field]: value
+    }));
+  }
+
+  updateSearchQuery(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.searchQuery.set(target.value);
+  }
+
+  resetTemplateFilters(): void {
+    this.templateFilters.set({ category: '' });
+    this.searchQuery.set('');
+  }
+
+  resetAssignmentFilters(): void {
+    this.assignmentFilters.set({
+      category: '',
+      room: '',
+      frequency: '',
+      status: 'all'
+    });
+  }
+
+  /**
    * Actions sur les modèles
    */
   openTemplateModal(mode: 'create' | 'edit', template?: TaskTemplate): void {
@@ -1002,10 +1048,11 @@ export class ManageTasksComponent {
     this.savingAssignment.set(true);
     try {
       const formValue = this.assignmentForm.getRawValue();
+      // Correction du type de fréquence
       const assignmentData: TaskAssignmentForm = {
         room_id: formValue.room_id,
         task_template_id: formValue.task_template_id,
-        frequency: formValue.frequency,
+        frequency: formValue.frequency as 'daily' | 'weekly' | 'monthly',
         suggested_time: formValue.suggested_time || undefined,
         default_performer: formValue.default_performer || undefined
       };
@@ -1057,23 +1104,6 @@ export class ManageTasksComponent {
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);
     }
-  }
-
-  /**
-   * Gestion des filtres
-   */
-  resetTemplateFilters(): void {
-    this.templateFilters.set({ category: '' });
-    this.searchQuery.set('');
-  }
-
-  resetAssignmentFilters(): void {
-    this.assignmentFilters.set({
-      category: '',
-      room: '',
-      frequency: '',
-      status: 'all'
-    });
   }
 
   /**

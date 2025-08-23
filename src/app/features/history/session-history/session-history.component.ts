@@ -21,6 +21,14 @@ interface HistorySession {
 }
 
 /**
+ * Interface pour les filtres
+ */
+interface HistoryFilters {
+  period: string;
+  status: string;
+}
+
+/**
  * Composant d'historique des sessions
  */
 @Component({
@@ -110,7 +118,11 @@ interface HistorySession {
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label class="form-label text-sm">Période</label>
-              <select class="form-input form-select" [(ngModel)]="filters.period">
+              <select 
+                class="form-input form-select" 
+                [value]="filters().period"
+                (change)="updateFilter('period', $event)"
+              >
                 <option value="all">Toute la période</option>
                 <option value="week">Cette semaine</option>
                 <option value="month">Ce mois</option>
@@ -120,7 +132,11 @@ interface HistorySession {
             
             <div>
               <label class="form-label text-sm">Statut</label>
-              <select class="form-input form-select" [(ngModel)]="filters.status">
+              <select 
+                class="form-input form-select" 
+                [value]="filters().status"
+                (change)="updateFilter('status', $event)"
+              >
                 <option value="all">Tous les statuts</option>
                 <option value="completed">Complètes</option>
                 <option value="incomplete">Incomplètes</option>
@@ -244,7 +260,7 @@ interface HistorySession {
 })
 export class SessionHistoryComponent {
   // Filtres
-  readonly filters = signal({
+  readonly filters = signal<HistoryFilters>({
     period: 'all',
     status: 'all'
   });
@@ -313,6 +329,19 @@ export class SessionHistoryComponent {
 
     return sessions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   });
+
+  /**
+   * Gestion des filtres
+   */
+  updateFilter(field: keyof HistoryFilters, event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const value = target.value;
+    
+    this.filters.update(filters => ({
+      ...filters,
+      [field]: value
+    }));
+  }
 
   /**
    * Actions

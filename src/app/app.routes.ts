@@ -120,33 +120,33 @@ export const routes: Routes = [
           },
 
           // Gestion des utilisateurs (admin seulement)
-          {
-            path: 'users',
-            loadComponent: () => import('./features/manage/manage-users/manage-users.component')
-              .then(m => m.ManageUsersComponent),
-            canActivate: [() => {
-              // Guard inline pour admin seulement
-              const authService = inject(AuthService);
-              return authService.isAdmin();
-            }],
-            title: 'Gestion des utilisateurs - Micro-Crèche'
-          },
+          // {
+          //   path: 'users',
+          //   loadComponent: () => import('./features/manage/manage-users/manage-users.component')
+          //     .then(m => m.ManageUsersComponent),
+          //   canActivate: [() => {
+          //     // Guard inline pour admin seulement
+          //     const authService = inject(AuthService);
+          //     return authService.isAdmin();
+          //   }],
+          //   title: 'Gestion des utilisateurs - Micro-Crèche'
+          // },
 
           // Paramètres généraux
-          {
-            path: 'settings',
-            loadComponent: () => import('./features/manage/settings/settings.component')
-              .then(m => m.SettingsComponent),
-            title: 'Paramètres - Micro-Crèche'
-          },
+          // {
+          //   path: 'settings',
+          //   loadComponent: () => import('./features/manage/settings/settings.component')
+          //     .then(m => m.SettingsComponent),
+          //   title: 'Paramètres - Micro-Crèche'
+          // },
 
           // Rapports et exports
-          {
-            path: 'reports',
-            loadComponent: () => import('./features/manage/reports/reports.component')
-              .then(m => m.ReportsComponent),
-            title: 'Rapports - Micro-Crèche'
-          }
+          // {
+          //   path: 'reports',
+          //   loadComponent: () => import('./features/manage/reports/reports.component')
+          //     .then(m => m.ReportsComponent),
+          //   title: 'Rapports - Micro-Crèche'
+          // }
         ]
       },
 
@@ -163,12 +163,12 @@ export const routes: Routes = [
       },
 
       // Aide et documentation
-      {
-        path: 'help',
-        loadComponent: () => import('./features/help/help.component')
-          .then(m => m.HelpComponent),
-        title: 'Aide - Micro-Crèche'
-      },
+      // {
+      //   path: 'help',
+      //   loadComponent: () => import('./features/help/help.component')
+      //     .then(m => m.HelpComponent),
+      //   title: 'Aide - Micro-Crèche'
+      // },
 
       // ===================
       // Routes de développement (uniquement en dev)
@@ -177,18 +177,18 @@ export const routes: Routes = [
         {
           path: 'dev',
           children: [
-            {
-              path: 'components',
-              loadComponent: () => import('./dev/component-showcase/component-showcase.component')
-                .then(m => m.ComponentShowcaseComponent),
-              title: 'Showcase Components - Dev'
-            },
-            {
-              path: 'test-data',
-              loadComponent: () => import('./dev/test-data/test-data.component')
-                .then(m => m.TestDataComponent),
-              title: 'Test Data - Dev'
-            }
+            // {
+            //   path: 'components',
+            //   loadComponent: () => import('./dev/component-showcase/component-showcase.component')
+            //     .then(m => m.ComponentShowcaseComponent),
+            //   title: 'Showcase Components - Dev'
+            // },
+            // {
+            //   path: 'test-data',
+            //   loadComponent: () => import('./dev/test-data/test-data.component')
+            //     .then(m => m.TestDataComponent),
+            //   title: 'Test Data - Dev'
+            // }
           ]
         }
       ] : [])

@@ -106,7 +106,7 @@ import { RouterLink } from '@angular/router';
         <!-- Contact -->
         <div class="mt-8 text-sm text-gray-500">
           <p>Besoin d'aide ? Contactez-nous au</p>
-          <p class="font-medium text-primary-600">support@micro-creche.fr</p>
+          <p class="font-medium text-primary-600">support&#64;micro-creche.fr</p>
         </div>
       </div>
     </div>

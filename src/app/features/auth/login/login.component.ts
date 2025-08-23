@@ -1,7 +1,3 @@
-// ========================================
-// Composant Login Angular 19
-// src/app/features/auth/login/login.component.ts
-// ========================================
 import { Component, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -12,18 +8,18 @@ import { AuthService, type LoginCredentials } from '../../../core/services/auth.
  * Interface pour l'état du formulaire
  */
 interface LoginForm {
-  readonly email: string;
-  readonly password: string;
-  readonly rememberMe: boolean;
+  email: string;
+  password: string;
+  rememberMe: boolean;
 }
 
 /**
  * Interface pour les erreurs de validation
  */
 interface FormErrors {
-  readonly email?: string;
-  readonly password?: string;
-  readonly general?: string;
+  email?: string;
+  password?: string;
+  general?: string;
 }
 
 /**
@@ -64,7 +60,7 @@ interface FormErrors {
               </div>
             }
 
-            @if (queryParams().error; as error) {
+            @if (queryParams()['error']; as error) {
               <div class="alert alert-warning mb-4">
                 <div class="alert-icon">
                   <span class="text-lg">ℹ️</span>
@@ -153,7 +149,7 @@ interface FormErrors {
               <button
                 type="submit"
                 class="btn btn-primary btn-full"
-                [disabled]="!canSubmit()"
+                [disabled]="loginFormGroup.invalid || isSubmitting()"
               >
                 @if (isSubmitting()) {
                   <div class="spinner spinner-sm"></div>
@@ -225,7 +221,7 @@ interface FormErrors {
             <div class="bg-gray-50 p-4 rounded-lg">
               <p class="text-sm text-gray-700">
                 <strong>Administrateur :</strong><br>
-                📧 admin@micro-creche.fr<br>
+                📧 admin&#64;micro-creche.fr<br>
                 📞 01 23 45 67 89
               </p>
             </div>
@@ -293,11 +289,11 @@ export class LoginComponent {
   // Version de l'application
   readonly appVersion = '1.0.0';
 
-  // Signals d'état
-  private readonly isSubmitting = signal(false);
-  private readonly showPassword = signal(false);
-  private readonly showForgotPasswordModal = signal(false);
-  private readonly formErrors = signal<FormErrors>({});
+  // Signals d'état - rendus publics pour le template
+  readonly isSubmitting = signal(false);
+  readonly showPassword = signal(false);
+  readonly showForgotPasswordModal = signal(false);
+  readonly formErrors = signal<FormErrors>({});
 
   // Form reactive
   readonly loginFormGroup = this.fb.nonNullable.group({

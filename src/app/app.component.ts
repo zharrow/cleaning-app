@@ -1,10 +1,6 @@
-// ========================================
-// Composant App principal Angular 19
-// src/app/app.component.ts
-// ========================================
 import { Component, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
+import { RouterOutlet, Router, NavigationEnd, RouterLink } from '@angular/router';
 import { AuthService } from './core/services/auth.service';
 import { ApiService } from './core/services/api.service';
 import { filter } from 'rxjs/operators';
@@ -26,7 +22,7 @@ interface SystemNotification {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet],
+  imports: [CommonModule, RouterOutlet, RouterLink],
   template: `
     <!-- Skip link pour l'accessibilité -->
     <a href="#main-content" class="skip-link">
@@ -99,7 +95,7 @@ interface SystemNotification {
                     
                     <button 
                       class="btn btn-ghost btn-icon"
-                      (click)="showUserMenu = !showUserMenu"
+                      (click)="toggleUserMenu()"
                       [attr.aria-label]="'Menu utilisateur'"
                     >
                       <div class="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
@@ -114,7 +110,7 @@ interface SystemNotification {
             </div>
 
             <!-- Menu utilisateur dropdown -->
-            @if (showUserMenu) {
+            @if (showUserMenu()) {
               <div class="absolute top-full right-4 mt-2 w-48 bg-white rounded-lg shadow-lg border z-50">
                 <div class="py-2">
                   <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
@@ -307,14 +303,14 @@ export class AppComponent {
   private readonly router = inject(Router);
 
   // Signals d'état local
-  private readonly sidebarOpen = signal(false);
-  private readonly sidebarCollapsed = signal(false);
-  private readonly showUserMenu = signal(false);
-  private readonly notifications = signal<SystemNotification[]>([]);
-  private readonly isOffline = signal(false);
-  private readonly hasUpdates = signal(false);
-  private readonly startingSession = signal(false);
-  private readonly currentRoute = signal('/');
+  readonly sidebarOpen = signal(false);
+  readonly sidebarCollapsed = signal(false);
+  readonly showUserMenu = signal(false);
+  readonly notifications = signal<SystemNotification[]>([]);
+  readonly isOffline = signal(false);
+  readonly hasUpdates = signal(false);
+  readonly startingSession = signal(false);
+  readonly currentRoute = signal('/');
 
   // Computed signals
   readonly appReady = computed(() => 
@@ -334,6 +330,8 @@ export class AppComponent {
     }
     return 'Chargement...';
   });
+
+  toggleUserMenu(): void { this.showUserMenu.update(show => !show); }
 
   readonly navigationItems = computed(() => {
     const baseItems = [

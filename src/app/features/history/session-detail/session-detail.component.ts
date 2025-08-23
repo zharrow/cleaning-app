@@ -53,7 +53,8 @@ interface SessionDetail extends CleaningSession {
             </div>
           }
         </div>
-      } @else if (sessionDetail(); as session) {
+      } @else {
+        @if (sessionDetail(); as session) {
         
         <!-- En-tête de session -->
         <div class="page-header">
@@ -329,8 +330,8 @@ interface SessionDetail extends CleaningSession {
           </div>
         </div>
         
-      } @else {
-        <!-- Session non trouvée -->
+        } @else {
+          <!-- Session non trouvée -->
         <div class="card">
           <div class="card-body text-center py-12">
             <span class="text-6xl mb-4 block">❓</span>
@@ -345,8 +346,8 @@ interface SessionDetail extends CleaningSession {
             </a>
           </div>
         </div>
+        }
       }
-    </div>
 
     <!-- Modal Photo -->
     @if (selectedPhoto()) {
@@ -386,13 +387,13 @@ export class SessionDetailComponent implements OnInit {
   private readonly apiService = inject(ApiService);
 
   // Signals d'état
-  private readonly sessionId = signal<string | null>(null);
-  private readonly isLoading = signal(false);
-  private readonly downloadingReport = signal(false);
-  private readonly selectedPhoto = signal<string | null>(null);
+  readonly sessionId = signal<string | null>(null);
+  readonly isLoading = signal(false);
+  readonly downloadingReport = signal(false);
+  readonly selectedPhoto = signal<string | null>(null);
 
   // Mock data pour la session (à remplacer par l'API)
-  private readonly sessionDetail = signal<SessionDetail | null>({
+  readonly sessionDetail = signal<SessionDetail | null>({
     id: '1',
     date: '2024-01-15',
     status: 'completed',

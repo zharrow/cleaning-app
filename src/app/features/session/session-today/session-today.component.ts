@@ -1,11 +1,6 @@
-// ========================================
-// Composant Session du jour Angular 19
-// src/app/features/session/session-today/session-today.component.ts
-// ========================================
 import { Component, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { ApiService, type CleaningLog, type CleaningSession } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
 
@@ -27,21 +22,21 @@ interface RoomTaskGroup {
  * Interface pour les filtres
  */
 interface TaskFilters {
-  readonly status: 'all' | 'todo' | 'in_progress' | 'done' | 'blocked';
-  readonly room: string;
-  readonly performer: string;
+  status: 'all' | 'todo' | 'in_progress' | 'done' | 'blocked';
+  room: string;
+  performer: string;
 }
 
 /**
  * Interface pour le modal de validation de tâche
  */
 interface TaskValidationModal {
-  readonly isOpen: boolean;
-  readonly task: CleaningLog | null;
-  readonly status: CleaningLog['status'];
-  readonly performer: string;
-  readonly notes: string;
-  readonly photos: File[];
+  isOpen: boolean;
+  task: CleaningLog | null;
+  status: CleaningLog['status'];
+  performer: string;
+  notes: string;
+  photos: File[];
 }
 
 /**
@@ -51,7 +46,7 @@ interface TaskValidationModal {
 @Component({
   selector: 'app-session-today',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="page-container">
       
@@ -182,8 +177,8 @@ interface TaskValidationModal {
                 <label class="form-label text-sm">Statut</label>
                 <select 
                   class="form-input form-select"
-                  [(ngModel)]="filters.status"
-                  (ngModelChange)="updateFilters()"
+                  [value]="filters().status"
+                  (change)="updateFilter('status', $event)"
                 >
                   <option value="all">Tous les statuts</option>
                   <option value="todo">À faire</option>
@@ -198,8 +193,8 @@ interface TaskValidationModal {
                 <label class="form-label text-sm">Pièce</label>
                 <select 
                   class="form-input form-select"
-                  [(ngModel)]="filters.room"
-                  (ngModelChange)="updateFilters()"
+                  [value]="filters().room"
+                  (change)="updateFilter('room', $event)"
                 >
                   <option value="">Toutes les pièces</option>
                   @for (room of availableRooms(); track room.id) {
@@ -213,8 +208,8 @@ interface TaskValidationModal {
                 <label class="form-label text-sm">Exécutant</label>
                 <select 
                   class="form-input form-select"
-                  [(ngModel)]="filters.performer"
-                  (ngModelChange)="updateFilters()"
+                  [value]="filters().performer"
+                  (change)="updateFilter('performer', $event)"
                 >
                   <option value="">Tous les exécutants</option>
                   @for (performer of availablePerformers(); track performer) {
@@ -412,7 +407,8 @@ interface TaskValidationModal {
                 <label class="form-label required">Statut</label>
                 <select 
                   class="form-input form-select"
-                  [(ngModel)]="taskModal.status"
+                  [value]="taskModal().status"
+                  (change)="updateTaskModalField('status', $event)"
                 >
                   <option value="todo">À faire</option>
                   <option value="in_progress">En cours</option>
@@ -429,7 +425,8 @@ interface TaskValidationModal {
                 <input 
                   type="text"
                   class="form-input"
-                  [(ngModel)]="taskModal.performer"
+                  [value]="taskModal().performer"
+                  (input)="updateTaskModalField('performer', $event)"
                   placeholder="Nom de l'exécutant"
                   list="performers-list"
                 />
@@ -445,7 +442,8 @@ interface TaskValidationModal {
                 <label class="form-label">Notes</label>
                 <textarea 
                   class="form-input form-textarea"
-                  [(ngModel)]="taskModal.notes"
+                  [value]="taskModal().notes"
+                  (input)="updateTaskModalField('notes', $event)"
                   placeholder="Commentaires, observations..."
                   rows="3"
                 ></textarea>
@@ -573,10 +571,10 @@ export class SessionTodayComponent {
   readonly authService = inject(AuthService);
 
   // Signals d'état
-  private readonly startingSession = signal(false);
-  private readonly completingSession = signal(false);
-  private readonly exportingSession = signal(false);
-  private readonly savingTask = signal(false);
+  readonly startingSession = signal(false);
+  readonly completingSession = signal(false);
+  readonly exportingSession = signal(false);
+  readonly savingTask = signal(false);
 
   // Filtres
   readonly filters = signal<TaskFilters>({
@@ -738,6 +736,7 @@ export class SessionTodayComponent {
 
         return () => clearInterval(interval);
       }
+      return; // Retourner undefined quand pas de session
     });
   }
 
@@ -795,8 +794,14 @@ export class SessionTodayComponent {
   /**
    * Gestion des filtres
    */
-  updateFilters(): void {
-    // Les computed signals se mettront à jour automatiquement
+  updateFilter(field: keyof TaskFilters, event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const value = target.value;
+    
+    this.filters.update(filters => ({
+      ...filters,
+      [field]: value
+    }));
   }
 
   resetFilters(): void {
@@ -830,6 +835,16 @@ export class SessionTodayComponent {
       notes: '',
       photos: []
     });
+  }
+
+  updateTaskModalField(field: keyof Omit<TaskValidationModal, 'isOpen' | 'task' | 'photos'>, event: Event): void {
+    const target = event.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+    const value = target.value;
+    
+    this.taskModal.update(modal => ({
+      ...modal,
+      [field]: value
+    }));
   }
 
   async saveTask(): Promise<void> {
@@ -956,9 +971,11 @@ export class SessionTodayComponent {
   }
 
   getTaskRowClass(status: CleaningLog['status']): string {
-    const classes = {
-      done: 'task-row-completed',
+    const classes: Record<CleaningLog['status'], string> = {
+      todo: '',
       in_progress: 'task-row-in-progress',
+      done: 'task-row-completed',
+      partial: '',
       blocked: 'task-row-blocked',
       skipped: 'task-row-blocked'
     };

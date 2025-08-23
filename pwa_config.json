@@ -33,9 +33,9 @@
     {
       "name": "api-tasks-cache",
       "urls": [
-        "/api/tasks/**",
-        "/api/rooms/**",
-        "/api/dashboard"
+        "/tasks/**",
+        "/rooms/**",
+        "/dashboard"
       ],
       "cacheConfig": {
         "maxSize": 100,
@@ -47,7 +47,7 @@
     {
       "name": "api-sessions-cache",
       "urls": [
-        "/api/sessions/**"
+        "/sessions/**"
       ],
       "cacheConfig": {
         "maxSize": 50,
@@ -59,8 +59,8 @@
     {
       "name": "api-critical",
       "urls": [
-        "/api/auth/**",
-        "/api/logs/**"
+        "/auth/**",
+        "/logs/**"
       ],
       "cacheConfig": {
         "maxSize": 10,
@@ -72,7 +72,7 @@
     {
       "name": "api-offline-fallback",
       "urls": [
-        "/api/**"
+        "/**"
       ],
       "cacheConfig": {
         "maxSize": 20,
@@ -323,7 +323,7 @@
     "  const url = new URL(request.url)": "",
     
     "  // Stratégie pour les requêtes API": "",
-    "  if (url.pathname.startsWith('/api/')) {": "",
+    "  if (url.pathname.startsWith('/')) {": "",
       "    event.respondWith(handleApiRequest(request))": "",
       "    return": "",
     "  }": "",
@@ -361,7 +361,7 @@
       "    }": "",
       
       "    // Si pas de cache et requête critique, retourner une réponse d'erreur": "",
-      "    if (request.url.includes('/api/auth/') || request.url.includes('/api/sessions/today')) {": "",
+      "    if (request.url.includes('/auth/') || request.url.includes('/sessions/today')) {": "",
         "      return new Response(": "",
         "        JSON.stringify({": "",
           "          error: 'offline',": "",

@@ -1,11 +1,6 @@
-// ========================================
-// Composant Gestion des pièces Angular 19
-// src/app/features/manage/manage-rooms/manage-rooms.component.ts
-// ========================================
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { ApiService, type Room } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
 
@@ -24,7 +19,7 @@ interface RoomForm {
 interface RoomModal {
   readonly isOpen: boolean;
   readonly mode: 'create' | 'edit';
-  readonly room: Room | null;
+  readonly room: Room | null | undefined;
 }
 
 /**
@@ -46,7 +41,7 @@ interface RoomStats {
 @Component({
   selector: 'app-manage-rooms',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   template: `
     <div class="page-container">
       
@@ -502,11 +497,11 @@ export class ManageRoomsComponent {
   private readonly fb = inject(FormBuilder);
 
   // Signals d'état
-  private readonly openMenuId = signal<string | null>(null);
-  private readonly savingRoom = signal(false);
-  private readonly savingOrder = signal(false);
-  private readonly creatingSuggested = signal(false);
-  private readonly showReorderModal = signal(false);
+  readonly openMenuId = signal<string | null>(null);
+  readonly savingRoom = signal(false);
+  readonly savingOrder = signal(false);
+  readonly creatingSuggested = signal(false);
+  readonly showReorderModal = signal(false);
 
   // Modal
   readonly roomModal = signal<RoomModal>({

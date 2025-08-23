@@ -48,17 +48,17 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   
   // Signals d'état
-  private readonly currentUserSignal = signal<User | null>(null);
-  private readonly appUserSignal = signal<AppUser | null>(null);
-  private readonly loadingSignal = signal(true);
-  private readonly errorSignal = signal<string | null>(null);
-  private readonly authCheckCompleted = signal(false);
+  readonly currentUserSignal = signal<User | null>(null);
+  readonly appUserSignal = signal<AppUser | null>(null);
+  readonly loadingSignal = signal(true);
+  readonly errorSignal = signal<string | null>(null);
+  readonly authCheckCompleted = signal(false);
   
   // Dev role override (non-production uniquement)
   private readonly devRoleSignal = signal<AppRole | null>(null);
   
   // Resource pour récupérer les données utilisateur depuis l'API
-  private readonly userResource: ResourceRef<AppUser | null> = resource({
+  readonly userResource: ResourceRef<AppUser | null | undefined> = resource({
     request: () => ({ firebaseUid: this.currentUserSignal()?.uid }),
     loader: async ({ request }) => {
       if (!request.firebaseUid) return null;
@@ -107,7 +107,7 @@ export class AuthService {
     user: this.currentUser(),
     appUser: this.appUser(),
     isLoading: this.isLoading(),
-    error: this.error(),
+    error: this.error() as string | null,
     isAuthenticated: this.isAuthenticated()
   }));
   

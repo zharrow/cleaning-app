@@ -1,11 +1,7 @@
-// ========================================
-// Configuration principale Angular 19
-// src/app/app.config.ts
-// ========================================
 import { ApplicationConfig, importProvidersFrom, isDevMode } from '@angular/core';
 import { provideRouter, withEnabledBlockingInitialNavigation, withInMemoryScrolling, withRouterConfig } from '@angular/router';
 import { provideHttpClient, withInterceptors, withFetch } from '@angular/common/http';
-import { provideServiceWorker } from '@angular/service-worker';
+// import { provideServiceWorker } from '@angular/service-worker';
 import { provideAnimations } from '@angular/platform-browser/animations';
 
 // Firebase
@@ -20,9 +16,9 @@ import { routes } from './app.routes';
 import { environment } from '../environments/environment';
 
 // Interceptors
-import { authInterceptor } from './core/interceptors/auth.interceptor';
+// import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
-import { loadingInterceptor } from './core/interceptors/loading.interceptor';
+// import { loadingInterceptor } from './core/interceptors/loading.interceptor';
 
 /**
  * Configuration de l'application Angular 19
@@ -59,8 +55,7 @@ export const appConfig: ApplicationConfig = {
       
       // Intercepteurs dans l'ordre d'exécution
       withInterceptors([
-        loadingInterceptor,  // Gestion du loading
-        authInterceptor,     // Ajout du token d'auth
+        // authInterceptor,     // Ajout du token d'auth
         errorInterceptor     // Gestion des erreurs globales
       ])
     ),
@@ -75,14 +70,12 @@ export const appConfig: ApplicationConfig = {
     // ===================
     // PWA Service Worker
     // ===================
-    provideServiceWorker('ngsw-worker.js', {
-      enabled: environment.production,
-      // Enregistre le SW quand l'application est stable
-      // ou après 30 secondes (au cas où l'application ne deviendrait jamais stable)
-      registrationStrategy: 'registerWhenStable:30000',
-      // Stratégie de mise à jour
-      updateStrategy: 'versionReady'
-    }),
+    // provideServiceWorker('ngsw-worker.js', {
+    //   enabled: environment.production,
+    //   // Enregistre le SW quand l'application est stable
+    //   // ou après 30 secondes (au cas où l'application ne deviendrait jamais stable)
+    //   registrationStrategy: 'registerWhenStable:30000',
+    // }),
 
     // ===================
     // Animations

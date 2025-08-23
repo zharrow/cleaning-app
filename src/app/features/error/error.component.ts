@@ -1,9 +1,6 @@
-// ========================================
-// Composant d'erreur - src/app/features/error/error.component.ts
-// ========================================
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 
 /**
  * Composant d'affichage des erreurs
@@ -12,7 +9,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 @Component({
   selector: 'app-error',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   template: `
     <div class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-red-50 to-orange-50">
       <div class="w-full max-w-md text-center animate-fade-in">
@@ -66,7 +63,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
             Si le problème persiste, contactez le support :
           </p>
           <div class="space-y-1 text-sm text-gray-600">
-            <p>📧 support@micro-creche.fr</p>
+            <p>📧 support&#64;micro-creche.fr</p>
             <p>📞 01 23 45 67 89</p>
           </div>
         </div>
@@ -100,11 +97,11 @@ export class ErrorComponent {
   private readonly route = inject(ActivatedRoute);
   
   // Signals pour les paramètres d'erreur
-  private readonly errorType = signal(this.route.snapshot.queryParams['type'] || 'unknown');
-  private readonly errorCode = signal(this.route.snapshot.queryParams['code'] || '500');
-  private readonly currentUrl = signal(window.location.href);
-  private readonly timestamp = signal(new Date().toISOString());
-  private readonly userAgent = signal(navigator.userAgent);
+   readonly errorType = signal(this.route.snapshot.queryParams['type'] || 'unknown');
+   readonly errorCode = signal(this.route.snapshot.queryParams['code'] || '500');
+   readonly currentUrl = signal(window.location.href);
+   readonly timestamp = signal(new Date().toISOString());
+   readonly userAgent = signal(navigator.userAgent);
   
   // Computed pour l'affichage
   readonly errorIcon = computed(() => {

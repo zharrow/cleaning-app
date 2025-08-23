@@ -388,11 +388,11 @@ ng version
 ### Setup développeur
 ```bash
 # Installation avec hooks
-npm install
-npm run prepare
+pnpm install
+pnpm run prepare
 
 # Vérification pre-commit
-npm run precommit
+pnpm run precommit
 ```
 
 ### Standards de code
@@ -409,6 +409,6 @@ MIT License - voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
 ## 🎉 Prêt à démarrer !
 
-Votre application Angular 19 est maintenant configurée avec toutes les dernières fonctionnalités. Lancez `npm start` et commencez à développer ! 
+Votre application Angular 19 est maintenant configurée avec toutes les dernières fonctionnalités. Lancez `pnpm start` et commencez à développer ! 
 
 Pour toute question, consultez la documentation ou créez une issue dans le repository.

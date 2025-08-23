@@ -248,7 +248,7 @@ export class ProfileComponent {
   private readonly fb = inject(FormBuilder);
 
   // Signals d'état
-  private readonly savingPreferences = signal(false);
+  readonly savingPreferences = signal(false);
 
   // Formulaire de préférences
   readonly preferencesForm = this.fb.nonNullable.group({

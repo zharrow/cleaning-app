@@ -437,7 +437,7 @@ export class DashboardComponent {
   private readonly apiService = inject(ApiService);
 
   // Signals d'état
-  private readonly startingSession = signal(false);
+  readonly startingSession = signal(false);
 
   // Computed signals depuis l'API
   readonly dashboardData = computed(() => this.apiService.dashboardStats.value());
@@ -574,6 +574,7 @@ export class DashboardComponent {
         // Cleanup à la destruction du composant
         return () => clearInterval(interval);
       }
+      return;
     });
   }
 
