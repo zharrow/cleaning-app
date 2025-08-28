@@ -237,7 +237,7 @@ interface TemplateFilters {
         } @else if (filteredTemplates().length > 0) {
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             @for (template of filteredTemplates(); track template.id) {
-              <div class="card hover-lift animate-fade-in">
+              <div class="card hover-lift animate-fade-in" [class.overflow-visible]="openMenuId() === template.id">
                 <div class="card-body">
                   <div class="flex items-start justify-between mb-4">
                     <div class="flex-1">
@@ -257,7 +257,7 @@ interface TemplateFilters {
                     </div>
                     
                     <!-- Menu actions -->
-                    <div class="relative">
+                    <div class="relative dropdown-container">
                       <button 
                         class="btn btn-ghost btn-icon btn-sm"
                         (click)="toggleTemplateMenu(template.id)"
@@ -266,25 +266,28 @@ interface TemplateFilters {
                       </button>
                       
                       @if (openMenuId() === template.id) {
-                        <div class="absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-10">
+                        <div class="absolute top-full right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border z-50 dropdown-menu">
                           <div class="py-2">
                             <button 
-                              class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                              class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                               (click)="editTemplate(template)"
                             >
-                              ✏️ Modifier
+                              <span class="text-lg">✏️</span>
+                              <span>Modifier</span>
                             </button>
                             <button 
-                              class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                              class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                               (click)="duplicateTemplate(template)"
                             >
-                              📋 Dupliquer
+                              <span class="text-lg">📋</span>
+                              <span>Dupliquer</span>
                             </button>
                             <button 
-                              class="w-full text-left px-4 py-2 text-sm text-danger-600 hover:bg-gray-100"
+                              class="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-700 hover:bg-red-50 transition-colors"
                               (click)="deleteTemplate(template.id)"
                             >
-                              🗑️ Supprimer
+                              <span class="text-lg">🗑️</span>
+                              <span>Supprimer</span>
                             </button>
                           </div>
                         </div>
@@ -742,6 +745,47 @@ interface TemplateFilters {
     .hover-lift:hover {
       transform: translateY(-2px);
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Fix pour les dropdowns qui sont coupés */
+    .card {
+      overflow: hidden;
+    }
+    
+    .card.overflow-visible {
+      overflow: visible !important;
+      z-index: 10;
+      position: relative;
+    }
+    
+    .dropdown-container {
+      z-index: 20;
+      position: relative;
+    }
+    
+    .dropdown-menu {
+      z-index: 1000 !important;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.95);
+      animation: dropdown-appear 0.15s ease-out;
+    }
+
+    @keyframes dropdown-appear {
+      from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* S'assurer que les grids ne coupent pas les dropdowns */
+    .grid {
+      overflow: visible;
     }
   `]
 })

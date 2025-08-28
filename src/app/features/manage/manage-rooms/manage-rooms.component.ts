@@ -145,6 +145,7 @@ interface RoomStats {
           @for (roomStat of sortedRooms(); track roomStat.id) {
             <div 
               class="card hover-lift animate-fade-in"
+              [class.overflow-visible]="openMenuId() === roomStat.id"
               [attr.data-room-id]="roomStat.id"
             >
               <div class="card-body">
@@ -183,7 +184,7 @@ interface RoomStats {
                   </div>
                   
                   <!-- Menu actions -->
-                  <div class="relative">
+                  <div class="relative dropdown-container">
                     <button 
                       class="btn btn-ghost btn-icon btn-sm"
                       (click)="toggleRoomMenu(roomStat.id)"
@@ -192,37 +193,34 @@ interface RoomStats {
                     </button>
                     
                     @if (openMenuId() === roomStat.id) {
-                      <div class="absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-10">
+                      <div class="absolute top-full right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border z-50 dropdown-menu">
                         <div class="py-2">
                           <button 
-                            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                             (click)="editRoom(roomStat.id)"
                           >
-                            ✏️ Modifier
+                            <span class="text-lg">✏️</span>
+                            <span>Modifier</span>
                           </button>
                           <button 
-                            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            (click)="viewRoomTasks(roomStat.id)"
-                          >
-                            📋 Voir les tâches
-                          </button>
-                          <button 
-                            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                             (click)="duplicateRoom(roomStat.id)"
                           >
-                            📋 Dupliquer
+                            <span class="text-lg">📋</span>
+                            <span>Dupliquer</span>
                           </button>
-                          <hr class="my-1" />
+                          <div class="border-t my-1"></div>
                           <button 
-                            class="w-full text-left px-4 py-2 text-sm text-danger-600 hover:bg-gray-100"
+                            class="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             (click)="deleteRoom(roomStat.id)"
                             [disabled]="roomStat.assignedTasksCount > 0"
                           >
-                            🗑️ Supprimer
+                            <span class="text-lg">🗑️</span>
+                            <span>Supprimer</span>
                           </button>
                           @if (roomStat.assignedTasksCount > 0) {
-                            <p class="px-4 py-1 text-xs text-gray-500">
-                              Supprimez d'abord les tâches assignées
+                            <p class="px-4 py-2 text-xs text-gray-500 bg-gray-50 mx-2 rounded-md">
+                              💡 Supprimez d'abord les tâches assignées
                             </p>
                           }
                         </div>
@@ -248,21 +246,6 @@ interface RoomStats {
                   </div>
                 </div>
                 
-                <!-- Actions rapides -->
-                <div class="flex gap-2 mt-4">
-                  <button 
-                    class="btn btn-secondary btn-sm flex-1"
-                    (click)="editRoom(roomStat.id)"
-                  >
-                    ✏️ Modifier
-                  </button>
-                  <button 
-                    class="btn btn-primary btn-sm flex-1"
-                    (click)="viewRoomTasks(roomStat.id)"
-                  >
-                    📋 Tâches
-                  </button>
-                </div>
               </div>
             </div>
           }
@@ -487,6 +470,47 @@ interface RoomStats {
     #sortable-rooms .drag-over {
       border: 2px dashed #3B82F6;
       background-color: rgba(59, 130, 246, 0.1);
+    }
+
+    /* Fix pour les dropdowns qui sont coupés */
+    .card {
+      overflow: hidden;
+    }
+    
+    .card.overflow-visible {
+      overflow: visible !important;
+      z-index: 10;
+      position: relative;
+    }
+    
+    .dropdown-container {
+      z-index: 20;
+      position: relative;
+    }
+    
+    .dropdown-menu {
+      z-index: 1000 !important;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.95);
+      animation: dropdown-appear 0.15s ease-out;
+    }
+
+    @keyframes dropdown-appear {
+      from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* S'assurer que les grids ne coupent pas les dropdowns */
+    .grid {
+      overflow: visible;
     }
   `]
 })
