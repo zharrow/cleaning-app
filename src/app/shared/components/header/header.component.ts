@@ -91,27 +91,10 @@ interface ProgressStats {
             </div>
           }
           
-          <!-- Bouton nouvelle session -->
-          @if (canStartSession()) {
-            <button
-              (click)="startNewSession()"
-              [disabled]="startingSession()"
-              class="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
-            >
-              @if (startingSession()) {
-                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              } @else {
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-              }
-              <span>{{ startingSession() ? 'Création...' : 'Nouvelle session' }}</span>
-            </button>
-          } @else {
-            <div class="text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded-lg">
-              Session active aujourd'hui
-            </div>
-          }
+          <!-- Info session automatique -->
+          <div class="text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded-lg">
+            Session créée automatiquement
+          </div>
           
           <!-- Bouton actualiser -->
           <button
@@ -167,7 +150,6 @@ export class HeaderComponent {
   readonly authService = inject(AuthService);
   
   // Signaux d'état
-  readonly startingSession = signal(false);
   readonly refreshing = signal(false);
   
   // Mock data pour la progression (à remplacer par les vraies données)
@@ -187,9 +169,6 @@ export class HeaderComponent {
     return this.authService.isLoading();
   });
   
-  readonly canStartSession = computed(() => {
-    return this.authService.isAuthenticated() && !this.startingSession();
-  });
   
   constructor() {
     // Simuler des données de progression (à remplacer par un service)
@@ -217,24 +196,6 @@ export class HeaderComponent {
   /**
    * Actions
    */
-  async startNewSession(): Promise<void> {
-    if (this.startingSession()) return;
-    
-    this.startingSession.set(true);
-    try {
-      // Logique pour créer une nouvelle session
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('Nouvelle session créée');
-      
-      // Mettre à jour les données de progression
-      this.loadProgressData();
-    } catch (error) {
-      console.error('Erreur lors de la création de la session:', error);
-    } finally {
-      this.startingSession.set(false);
-    }
-  }
-  
   async refreshData(): Promise<void> {
     if (this.refreshing()) return;
     

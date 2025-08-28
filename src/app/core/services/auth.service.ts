@@ -57,6 +57,9 @@ export class AuthService {
   // Dev role override (non-production uniquement)
   private readonly devRoleSignal = signal<AppRole | null>(null);
   
+  // Signal pour éviter de créer la session plusieurs fois
+  private readonly sessionCreationAttempted = signal(false);
+  
   // Resource pour récupérer les données utilisateur depuis l'API
   readonly userResource: ResourceRef<AppUser | null | undefined> = resource({
     request: () => ({ firebaseUid: this.currentUserSignal()?.uid }),
@@ -76,6 +79,22 @@ export class AuthService {
         return response;
       } catch (error) {
         console.error('Erreur lors de la récupération du profil utilisateur:', error);
+        // Si l'utilisateur n'existe pas en base, essayer de le créer
+        if (error && typeof error === 'object' && 'status' in error && error.status === 401) {
+          try {
+            const token = await this.currentUserSignal()?.getIdToken();
+            if (token) {
+              const createResponse = await firstValueFrom(
+                this.http.post<{user: AppUser}>(`${environment.apiUrl}/auth/login`, {
+                  id_token: token
+                })
+              );
+              return createResponse.user;
+            }
+          } catch (createError) {
+            console.error('Erreur lors de la création automatique de l\'utilisateur:', createError);
+          }
+        }
         return null;
       }
     }
@@ -133,6 +152,18 @@ export class AuthService {
         this.handleAuthStateChange();
       }
     });
+
+    // Effect pour créer automatiquement la session du jour
+    effect(() => {
+      const user = this.appUser();
+      const isAuthenticated = this.isAuthenticated();
+      const attempted = this.sessionCreationAttempted();
+      
+      if (isAuthenticated && user && (user.role === 'admin' || user.role === 'manager') && !attempted) {
+        this.sessionCreationAttempted.set(true);
+        this.createTodaySessionIfNeeded();
+      }
+    });
   }
   
   /**
@@ -185,6 +216,19 @@ export class AuthService {
       if (userCredential.user) {
         // Le signal currentUser sera mis à jour automatiquement par onAuthStateChanged
         // Le resource userResource se rechargera automatiquement
+        
+        // Créer l'utilisateur en base s'il n'existe pas déjà
+        try {
+          const token = await userCredential.user.getIdToken();
+          await firstValueFrom(
+            this.http.post(`${environment.apiUrl}/auth/login`, {
+              id_token: token
+            })
+          );
+        } catch (error) {
+          console.warn('Erreur lors de la création/vérification de l\'utilisateur en base:', error);
+        }
+        
         return true;
       }
       
@@ -207,6 +251,8 @@ export class AuthService {
       await signOut(this.auth);
       this.appUserSignal.set(null);
       this.errorSignal.set(null);
+      // Réinitialiser le flag de création de session pour la prochaine connexion
+      this.sessionCreationAttempted.set(false);
       this.router.navigate(['/login']);
     } catch (error) {
       console.error('Erreur de déconnexion:', error);
@@ -276,6 +322,28 @@ export class AuthService {
     return roleHierarchy[currentRole] >= roleHierarchy[requiredRole];
   }
   
+  /**
+   * Crée automatiquement la session du jour si nécessaire
+   */
+  private async createTodaySessionIfNeeded(): Promise<void> {
+    try {
+      const token = await this.getToken();
+      if (!token) return;
+
+      // Appeler l'endpoint POST /sessions/today pour créer ou récupérer la session
+      await firstValueFrom(
+        this.http.post(`${environment.apiUrl}/sessions/today`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      );
+      
+      console.log('✅ Session du jour créée/récupérée automatiquement');
+    } catch (error) {
+      console.error('❌ Erreur lors de la création automatique de la session:', error);
+      // Ne pas bloquer l'authentification si la création de session échoue
+    }
+  }
+
   /**
    * Méthodes privées
    */

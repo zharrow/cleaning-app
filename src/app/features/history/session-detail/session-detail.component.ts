@@ -419,9 +419,16 @@ export class SessionDetailComponent implements OnInit {
           id: '1',
           room_id: '1',
           task_template_id: '1',
-          frequency: 'daily' as const,
+          frequency_days: {
+            type: 'daily' as const,
+            times_per_day: 2,
+            days: []
+          },
           suggested_time: '08:00',
-          default_performer: 'Marie Dupont',
+          default_performer: {
+            id: '1',
+            name: 'Marie Dupont',
+          },
           is_active: true,
           room: {
             id: '1',
@@ -441,7 +448,7 @@ export class SessionDetailComponent implements OnInit {
             updated_at: '2024-01-01T00:00:00Z'
           },
           created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z'
+          times_per_day: 2
         },
         created_at: '2024-01-15T08:15:00Z',
         updated_at: '2024-01-15T08:30:00Z'
@@ -458,7 +465,7 @@ export class SessionDetailComponent implements OnInit {
     const groups = new Map<string, CleaningLog[]>();
     
     session.logs.forEach(log => {
-      const roomId = log.assigned_task.room_id;
+      const roomId = log.assigned_task.room_id || log.assigned_task.room.id;
       if (!groups.has(roomId)) {
         groups.set(roomId, []);
       }

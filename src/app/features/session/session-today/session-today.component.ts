@@ -105,25 +105,17 @@ interface TaskValidationModal {
           </div>
         </div>
       } @else if (!isLoading()) {
-        <!-- Aucune session active -->
+        <!-- Aucune session trouvée -->
         <div class="page-header">
           <div class="text-center">
-            <h1 class="page-title">Aucune session active</h1>
+            <h1 class="page-title">Session en cours d'initialisation</h1>
             <p class="page-subtitle mb-6">
-              Commencez une nouvelle session pour aujourd'hui
+              La session du jour se crée automatiquement à votre connexion
             </p>
-            <button 
-              class="btn btn-primary"
-              (click)="startNewSession()"
-              [disabled]="startingSession()"
-            >
-              @if (startingSession()) {
-                <div class="spinner spinner-sm"></div>
-              } @else {
-                <span class="text-lg">🚀</span>
-              }
-              Démarrer une session
-            </button>
+            <div class="text-6xl mb-4">⏳</div>
+            <p class="text-gray-600">
+              Veuillez patienter...
+            </p>
           </div>
         </div>
       }
@@ -571,7 +563,6 @@ export class SessionTodayComponent {
   readonly authService = inject(AuthService);
 
   // Signals d'état
-  readonly startingSession = signal(false);
   readonly completingSession = signal(false);
   readonly exportingSession = signal(false);
   readonly savingTask = signal(false);
@@ -660,7 +651,7 @@ export class SessionTodayComponent {
 
     // Grouper par pièce
     tasks.forEach(task => {
-      const roomId = task.assigned_task.room_id;
+      const roomId = task.assigned_task.room_id || task.assigned_task.room.id;
       const roomName = task.assigned_task.room.name;
       
       if (!groupsMap.has(roomId)) {
@@ -743,19 +734,6 @@ export class SessionTodayComponent {
   /**
    * Actions principales
    */
-  async startNewSession(): Promise<void> {
-    if (this.startingSession()) return;
-
-    this.startingSession.set(true);
-    try {
-      await this.apiService.startNewSession();
-    } catch (error) {
-      console.error('Erreur lors du démarrage de la session:', error);
-    } finally {
-      this.startingSession.set(false);
-    }
-  }
-
   async completeSession(): Promise<void> {
     const session = this.currentSession();
     if (!session || this.completingSession()) return;

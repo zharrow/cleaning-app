@@ -60,23 +60,6 @@ interface NavItem {
               </div>
             }
             
-            <!-- Bouton "Nouvelle session" si disponible -->
-            @if (canStartSession()) {
-              <button
-                (click)="startNewSession()"
-                [disabled]="startingSession()"
-                class="hidden md:flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
-              >
-                @if (startingSession()) {
-                  <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                } @else {
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1"></path>
-                  </svg>
-                }
-                <span>Nouvelle session</span>
-              </button>
-            }
             
             <!-- Menu utilisateur desktop -->
             @if (authService.isAuthenticated()) {
@@ -208,22 +191,6 @@ interface NavItem {
             }
             
             <!-- Actions mobiles -->
-            @if (canStartSession()) {
-              <button
-                (click)="startNewSession(); closeMobileMenu()"
-                [disabled]="startingSession()"
-                class="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium text-blue-700 hover:bg-blue-50 transition-colors disabled:opacity-50"
-              >
-                @if (startingSession()) {
-                  <div class="w-5 h-5 border-2 border-blue-700 border-t-transparent rounded-full animate-spin"></div>
-                } @else {
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1"></path>
-                  </svg>
-                }
-                <span>Nouvelle session</span>
-              </button>
-            }
             
             @if (authService.isAuthenticated()) {
               <div class="border-t pt-3 mt-3">
@@ -308,7 +275,6 @@ export class NavbarComponent {
   // Signaux d'état
   readonly isMobileMenuOpen = signal(false);
   readonly isUserMenuOpen = signal(false);
-  readonly startingSession = signal(false);
   readonly loggingOut = signal(false);
   
   // Configuration de navigation
@@ -359,9 +325,6 @@ export class NavbarComponent {
       .toUpperCase();
   });
   
-  readonly canStartSession = computed(() => {
-    return this.authService.isAuthenticated() && !this.startingSession();
-  });
   
   readonly syncInProgress = computed(() => {
     return this.authService.isLoading();
@@ -409,22 +372,6 @@ export class NavbarComponent {
   async navigateToSettings(): Promise<void> {
     this.isUserMenuOpen.set(false);
     this.router.navigate(['/settings']);
-  }
-  
-  async startNewSession(): Promise<void> {
-    if (this.startingSession()) return;
-    
-    this.startingSession.set(true);
-    try {
-      // Logique pour créer une nouvelle session
-      // À adapter selon votre API
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulation
-      this.router.navigate(['/session']);
-    } catch (error) {
-      console.error('Erreur lors de la création de la session:', error);
-    } finally {
-      this.startingSession.set(false);
-    }
   }
   
   async logout(): Promise<void> {

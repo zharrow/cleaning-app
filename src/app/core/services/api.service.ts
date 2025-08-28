@@ -48,16 +48,24 @@ export interface TaskTemplate {
 
 export interface AssignedTask {
   readonly id: string;
-  readonly room_id: string;
-  readonly task_template_id: string;
-  readonly frequency: 'daily' | 'weekly' | 'monthly';
+  readonly room_id?: string;
+  readonly task_template_id?: string;
+  readonly frequency_days: {
+    type: 'daily' | 'weekly' | 'monthly';
+    times_per_day: number;
+    days: number[];
+  };
+  readonly times_per_day: number;
   readonly suggested_time?: string;
-  readonly default_performer?: string;
+  readonly default_performer_id?: string;
   readonly is_active: boolean;
   readonly room: Room;
   readonly task_template: TaskTemplate;
+  readonly default_performer?: {
+    id: string;
+    name: string;
+  };
   readonly created_at: string;
-  readonly updated_at: string;
 }
 
 export interface CleaningSession {
@@ -129,7 +137,7 @@ export class ApiService {
       const response = await this.httpGet<DashboardStats>('/dashboard', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      return response.data;
+      return response;
     }
   });
   
@@ -144,7 +152,7 @@ export class ApiService {
         const response = await this.httpGet<CleaningSession>('/sessions/today', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        return response.data;
+        return response;
       } catch (error: any) {
         // Si pas de session aujourd'hui, retourner null au lieu d'erreur
         if (error.status === 404) return null;
@@ -168,7 +176,7 @@ export class ApiService {
       const response = await this.httpGet<CleaningLog[]>(`/sessions/${request.sessionId}/logs`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      return response.data;
+      return response;
     }
   });
   
@@ -176,13 +184,18 @@ export class ApiService {
   readonly rooms: ResourceRef<Room[] | null | undefined> = resource({
     request: () => ({ trigger: this.refreshTrigger() }),
     loader: async () => {
+      console.log('🔄 Rechargement des rooms...');
       const token = await this.authService.getToken();
-      if (!token) return [];
+      if (!token) {
+        console.log('❌ Pas de token pour charger les rooms');
+        return [];
+      }
       
       const response = await this.httpGet<Room[]>('/rooms', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      return response.data;
+      console.log('✅ Rooms chargées:', response);
+      return response;
     }
   });
   
@@ -193,10 +206,10 @@ export class ApiService {
       const token = await this.authService.getToken();
       if (!token) return [];
       
-      const response = await this.httpGet<AssignedTask[]>('/tasks/assigned', {
+      const response = await this.httpGet<AssignedTask[]>('/assigned-tasks', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      return response.data;
+      return response;
     }
   });
   
@@ -204,13 +217,18 @@ export class ApiService {
   readonly taskTemplates: ResourceRef<TaskTemplate[] | null | undefined> = resource({
     request: () => ({ trigger: this.refreshTrigger() }),
     loader: async () => {
+      console.log('🔄 Rechargement des taskTemplates...');
       const token = await this.authService.getToken();
-      if (!token) return [];
+      if (!token) {
+        console.log('❌ Pas de token pour charger les taskTemplates');
+        return [];
+      }
       
       const response = await this.httpGet<TaskTemplate[]>('/tasks', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      return response.data;
+      console.log('✅ TaskTemplates chargés:', response);
+      return response;
     }
   });
   
@@ -244,20 +262,6 @@ export class ApiService {
    * Méthodes pour les actions CRUD
    */
   
-  /**
-   * Démarre une nouvelle session de nettoyage
-   */
-  async startNewSession(): Promise<CleaningSession> {
-    const token = await this.authService.getToken();
-    if (!token) throw new Error('Non authentifié');
-    
-    const response = await this.httpPost<CleaningSession>('/sessions', {}, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    
-    this.refreshData();
-    return response.data;
-  }
   
   /**
    * Met à jour le statut d'un log de nettoyage
@@ -274,7 +278,7 @@ export class ApiService {
     });
     
     this.refreshData();
-    return response.data;
+    return response;
   }
   
   /**
@@ -288,8 +292,10 @@ export class ApiService {
       headers: { Authorization: `Bearer ${token}` }
     });
     
-    this.refreshData();
-    return response.data;
+    // Rafraîchir seulement les rooms, pas les sessions
+    console.log('🏠 Room créée, rechargement des rooms...', response);
+    this.rooms.reload();
+    return response;
   }
   
   /**
@@ -303,8 +309,9 @@ export class ApiService {
       headers: { Authorization: `Bearer ${token}` }
     });
     
-    this.refreshData();
-    return response.data;
+    // Rafraîchir seulement les rooms
+    this.rooms.reload();
+    return response;
   }
   
   /**
@@ -318,7 +325,8 @@ export class ApiService {
       headers: { Authorization: `Bearer ${token}` }
     });
     
-    this.refreshData();
+    // Rafraîchir seulement les rooms
+    this.rooms.reload();
   }
   
   /**
@@ -334,8 +342,10 @@ export class ApiService {
       headers: { Authorization: `Bearer ${token}` }
     });
     
-    this.refreshData();
-    return response.data;
+    // Rafraîchir seulement les templates de tâches, pas les sessions
+    console.log('📋 TaskTemplate créé, rechargement des templates...', response);
+    this.taskTemplates.reload();
+    return response;
   }
   
   /**
@@ -344,19 +354,25 @@ export class ApiService {
   async assignTask(assignment: {
     room_id: string;
     task_template_id: string;
-    frequency: 'daily' | 'weekly' | 'monthly';
+    default_performer_id: string;
+    frequency_days?: {
+      type: 'daily' | 'weekly' | 'monthly';
+      times_per_day?: number;
+      days?: number[];
+    };
+    times_per_day?: number;
     suggested_time?: string;
-    default_performer?: string;
   }): Promise<AssignedTask> {
     const token = await this.authService.getToken();
     if (!token) throw new Error('Non authentifié');
     
-    const response = await this.httpPost<AssignedTask>('/tasks/assigned', assignment, {
+    const response = await this.httpPost<AssignedTask>('/assigned-tasks', assignment, {
       headers: { Authorization: `Bearer ${token}` }
     });
     
-    this.refreshData();
-    return response.data;
+    // Rafraîchir seulement les tâches assignées, pas les sessions
+    this.assignedTasks.reload();
+    return response;
   }
   
   /**
@@ -373,7 +389,7 @@ export class ApiService {
       headers: { Authorization: `Bearer ${token}` }
     });
     
-    return response.data.url;
+    return response.url;
   }
   
   /**
@@ -408,7 +424,7 @@ export class ApiService {
   private async httpGet<T>(
     endpoint: string, 
     options: { headers?: HttpHeaders | { [header: string]: string } } = {}
-  ): Promise<ApiResponse<T>> {
+  ): Promise<T> {
     try {
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         method: 'GET',
@@ -433,7 +449,7 @@ export class ApiService {
     endpoint: string, 
     body: any, 
     options: { headers?: HttpHeaders | { [header: string]: string } } = {}
-  ): Promise<ApiResponse<T>> {
+  ): Promise<T> {
     try {
       const isFormData = body instanceof FormData;
       const headers: any = { ...options.headers };
@@ -463,7 +479,7 @@ export class ApiService {
     endpoint: string, 
     body: any, 
     options: { headers?: HttpHeaders | { [header: string]: string } } = {}
-  ): Promise<ApiResponse<T>> {
+  ): Promise<T> {
     try {
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         method: 'PUT',

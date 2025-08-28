@@ -496,6 +496,13 @@ export class ManageRoomsComponent {
   readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
 
+  constructor() {
+    // Force le chargement initial des rooms
+    console.log('🏠 ManageRoomsComponent - Démarrage du composant');
+    this.apiService.rooms.reload();
+    this.apiService.assignedTasks.reload();
+  }
+
   // Signals d'état
   readonly openMenuId = signal<string | null>(null);
   readonly savingRoom = signal(false);
@@ -527,7 +534,7 @@ export class ManageRoomsComponent {
 
   readonly totalDailyDuration = computed(() => {
     return this.assignedTasks()
-      .filter(task => task.frequency === 'daily')
+      .filter(task => task.frequency_days.type === 'daily')
       .reduce((total, task) => total + task.task_template.estimated_duration, 0);
   });
 
@@ -540,8 +547,8 @@ export class ManageRoomsComponent {
   readonly sortedRooms = computed((): RoomStats[] => {
     return this.rooms()
       .map(room => {
-        const roomTasks = this.assignedTasks().filter(task => task.room_id === room.id);
-        const dailyTasks = roomTasks.filter(task => task.frequency === 'daily');
+        const roomTasks = this.assignedTasks().filter(task => task.room.id === room.id);
+        const dailyTasks = roomTasks.filter(task => task.frequency_days.type === 'daily');
         
         return {
           id: room.id,

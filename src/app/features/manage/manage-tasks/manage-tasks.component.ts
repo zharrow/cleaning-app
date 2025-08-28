@@ -22,9 +22,14 @@ interface TaskTemplateForm {
 interface TaskAssignmentForm {
   room_id: string;
   task_template_id: string;
-  frequency: 'daily' | 'weekly' | 'monthly';
+  default_performer_id: string;
+  frequency_days: {
+    type: 'daily' | 'weekly' | 'monthly';
+    times_per_day: number;
+    days: number[];
+  };
+  times_per_day: number;
   suggested_time?: string;
-  default_performer?: string;
 }
 
 /**
@@ -428,9 +433,9 @@ interface TemplateFilters {
                       <td>
                         <span 
                           class="badge"
-                          [class]="getFrequencyBadgeClass(assignment.frequency)"
+                          [class]="getFrequencyBadgeClass(assignment.frequency_days.type)"
                         >
-                          {{ getFrequencyLabel(assignment.frequency) }}
+                          {{ getFrequencyLabel(assignment.frequency_days.type) }}
                         </span>
                       </td>
                       <td>
@@ -440,7 +445,7 @@ interface TemplateFilters {
                       </td>
                       <td>
                         <span class="text-gray-600">
-                          {{ assignment.default_performer || '-' }}
+                          {{ assignment.default_performer?.name || '-' }}
                         </span>
                       </td>
                       <td>
@@ -652,15 +657,25 @@ interface TemplateFilters {
                 
                 <div class="form-group">
                   <label class="form-label required">Fréquence</label>
-                  <select class="form-input form-select" formControlName="frequency">
-                    <option value="">Sélectionner la fréquence</option>
+                  <select class="form-input form-select" formControlName="frequency_type">
                     <option value="daily">Quotidien</option>
                     <option value="weekly">Hebdomadaire</option>
                     <option value="monthly">Mensuel</option>
                   </select>
-                  @if (assignmentForm.get('frequency')?.invalid && assignmentForm.get('frequency')?.touched) {
+                  @if (assignmentForm.get('frequency_type')?.invalid && assignmentForm.get('frequency_type')?.touched) {
                     <div class="form-error">Veuillez sélectionner une fréquence</div>
                   }
+                </div>
+                
+                <div class="form-group">
+                  <label class="form-label">Fois par jour</label>
+                  <input 
+                    type="number"
+                    class="form-input"
+                    formControlName="times_per_day"
+                    min="1"
+                    max="10"
+                  />
                 </div>
                 
                 <div class="form-group">
@@ -673,11 +688,11 @@ interface TemplateFilters {
                 </div>
                 
                 <div class="form-group">
-                  <label class="form-label">Exécutant par défaut</label>
+                  <label class="form-label required">Exécutant par défaut</label>
                   <input 
                     type="text"
                     class="form-input"
-                    formControlName="default_performer"
+                    formControlName="default_performer_id"
                     placeholder="Nom de l'exécutant habituel"
                     list="performers-list"
                   />
@@ -736,6 +751,14 @@ export class ManageTasksComponent {
   readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
 
+  constructor() {
+    // Force le chargement initial des données
+    console.log('📋 ManageTasksComponent - Démarrage du composant');
+    this.apiService.taskTemplates.reload();
+    this.apiService.assignedTasks.reload();
+    this.apiService.rooms.reload();
+  }
+
   // Signals d'état
   readonly currentTab = signal<'templates' | 'assignments'>('templates');
   readonly openMenuId = signal<string | null>(null);
@@ -777,9 +800,10 @@ export class ManageTasksComponent {
   readonly assignmentForm = this.fb.nonNullable.group({
     room_id: ['', [Validators.required]],
     task_template_id: ['', [Validators.required]],
-    frequency: ['', [Validators.required]],
-    suggested_time: [''],
-    default_performer: ['']
+    default_performer_id: ['', [Validators.required]],
+    frequency_type: ['daily', [Validators.required]],
+    times_per_day: [1, [Validators.required, Validators.min(1)]],
+    suggested_time: ['']
   });
 
   // Computed signals depuis l'API
@@ -793,7 +817,7 @@ export class ManageTasksComponent {
 
   // Computed pour les statistiques
   readonly dailyTasksCount = computed(() => 
-    this.assignedTasks().filter(task => task.frequency === 'daily').length
+    this.assignedTasks().filter(task => task.frequency_days.type === 'daily').length
   );
 
   readonly categoriesCount = computed(() => {
@@ -810,8 +834,8 @@ export class ManageTasksComponent {
   readonly availablePerformers = computed(() => {
     const performers = new Set<string>();
     this.assignedTasks().forEach(task => {
-      if (task.default_performer) {
-        performers.add(task.default_performer);
+      if (task.default_performer?.name) {
+        performers.add(task.default_performer.name);
       }
     });
     // Ajouter quelques performers par défaut
@@ -833,13 +857,13 @@ export class ManageTasksComponent {
 
     if (search) {
       templates = templates.filter(t => 
-        t.name.toLowerCase().includes(search) ||
+        (t.name || '').toLowerCase().includes(search) ||
         t.description?.toLowerCase().includes(search) ||
-        t.category.toLowerCase().includes(search)
+        (t.category || '').toLowerCase().includes(search)
       );
     }
 
-    return templates.sort((a, b) => a.name.localeCompare(b.name));
+    return templates.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   });
 
   readonly filteredAssignments = computed(() => {
@@ -851,7 +875,7 @@ export class ManageTasksComponent {
     }
 
     if (filters.frequency) {
-      assignments = assignments.filter(a => a.frequency === filters.frequency);
+      assignments = assignments.filter(a => a.frequency_days.type === filters.frequency);
     }
 
     if (filters.status !== 'all') {
@@ -859,7 +883,7 @@ export class ManageTasksComponent {
       assignments = assignments.filter(a => a.is_active === isActive);
     }
 
-    return assignments.sort((a, b) => a.room.name.localeCompare(b.room.name));
+    return assignments.sort((a, b) => (a.room?.name || '').localeCompare(b.room?.name || ''));
   });
 
   /**
@@ -1022,11 +1046,12 @@ export class ManageTasksComponent {
 
     if (mode === 'edit' && assignment) {
       this.assignmentForm.patchValue({
-        room_id: assignment.room_id,
-        task_template_id: assignment.task_template_id,
-        frequency: assignment.frequency,
-        suggested_time: assignment.suggested_time || '',
-        default_performer: assignment.default_performer || ''
+        room_id: assignment.room_id || assignment.room.id,
+        task_template_id: assignment.task_template_id || assignment.task_template.id,
+        default_performer_id: assignment.default_performer_id || assignment.default_performer?.id || '',
+        frequency_type: assignment.frequency_days.type,
+        times_per_day: assignment.times_per_day,
+        suggested_time: assignment.suggested_time || ''
       });
     } else {
       this.assignmentForm.reset();
@@ -1052,9 +1077,14 @@ export class ManageTasksComponent {
       const assignmentData: TaskAssignmentForm = {
         room_id: formValue.room_id,
         task_template_id: formValue.task_template_id,
-        frequency: formValue.frequency as 'daily' | 'weekly' | 'monthly',
-        suggested_time: formValue.suggested_time || undefined,
-        default_performer: formValue.default_performer || undefined
+        default_performer_id: formValue.default_performer_id,
+        frequency_days: {
+          type: formValue.frequency_type as 'daily' | 'weekly' | 'monthly',
+          times_per_day: formValue.times_per_day || 1,
+          days: []
+        },
+        times_per_day: formValue.times_per_day || 1,
+        suggested_time: formValue.suggested_time || undefined
       };
 
       if (this.assignmentModal().mode === 'create') {

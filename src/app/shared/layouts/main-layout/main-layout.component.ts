@@ -13,7 +13,7 @@ import { HeaderComponent } from '../../components/header/header.component';
   standalone: true,
   imports: [CommonModule, RouterOutlet, SidebarComponent, HeaderComponent],
   template: `
-    <div class="min-h-screen bg-gray-50 flex">
+    <div class="layout-container bg-gray-50 flex">
       
       <!-- Sidebar fixe à gauche -->
       <app-sidebar></app-sidebar>
@@ -22,7 +22,7 @@ import { HeaderComponent } from '../../components/header/header.component';
       <div class="flex-1 flex flex-col min-w-0">
         
         <!-- Header fixe en haut -->
-        <app-header></app-header>
+        <app-header class="flex-shrink-0"></app-header>
         
         <!-- Zone de contenu avec scroll -->
         <main class="flex-1 overflow-y-auto">
@@ -35,18 +35,19 @@ import { HeaderComponent } from '../../components/header/header.component';
   styles: [`
     :host {
       display: block;
-      height: 100vh;
-      overflow: hidden;
+      min-height: 100vh;
     }
     
-    /* Assurer que le layout prend toute la hauteur */
-    .min-h-screen {
-      min-height: 100vh;
+    /* Assurer que le layout prend toute la hauteur d'écran */
+    .layout-container {
+      height: 100vh;
+      max-height: 100vh;
     }
     
     /* Scroll smooth pour le contenu principal */
     main {
       scroll-behavior: smooth;
+      height: calc(100vh - 4rem); /* Soustraire la hauteur du header */
     }
     
     /* Personnalisation de la scrollbar pour le contenu principal */

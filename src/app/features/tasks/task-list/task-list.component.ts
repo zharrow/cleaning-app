@@ -210,9 +210,9 @@ interface TaskListFilters {
                         <td>
                           <span 
                             class="badge"
-                            [class]="getFrequencyBadgeClass(task.frequency)"
+                            [class]="getFrequencyBadgeClass(task.frequency_days.type)"
                           >
-                            {{ getFrequencyLabel(task.frequency) }}
+                            {{ getFrequencyLabel(task.frequency_days.type) }}
                           </span>
                         </td>
                         <td>
@@ -222,7 +222,7 @@ interface TaskListFilters {
                         </td>
                         <td>
                           <span class="text-gray-600">
-                            {{ task.default_performer || '-' }}
+                            {{ task.default_performer?.name || '-' }}
                           </span>
                         </td>
                         <td>
@@ -280,23 +280,23 @@ export class TaskListComponent {
   readonly isLoading = computed(() => this.apiService.assignedTasks.isLoading());
 
   readonly dailyTasksCount = computed(() => 
-    this.allTasks().filter(task => task.frequency === 'daily').length
+    this.allTasks().filter(task => task.frequency_days.type === 'daily').length
   );
 
   readonly weeklyTasksCount = computed(() => 
-    this.allTasks().filter(task => task.frequency === 'weekly').length
+    this.allTasks().filter(task => task.frequency_days.type === 'weekly').length
   );
 
   readonly totalDailyDuration = computed(() => 
     this.allTasks()
-      .filter(task => task.frequency === 'daily')
+      .filter(task => task.frequency_days.type === 'daily')
       .reduce((total, task) => total + task.task_template.estimated_duration, 0)
   );
 
   readonly availableRooms = computed(() => {
     const rooms = new Map<string, { id: string, name: string }>();
     this.allTasks().forEach(task => {
-      rooms.set(task.room_id, { id: task.room_id, name: task.room.name });
+      rooms.set(task.room.id, { id: task.room.id, name: task.room.name });
     });
     return Array.from(rooms.values()).sort((a, b) => a.name.localeCompare(b.name));
   });
@@ -314,11 +314,11 @@ export class TaskListComponent {
     const currentFilters = this.filters();
 
     if (currentFilters.room) {
-      tasks = tasks.filter(task => task.room_id === currentFilters.room);
+      tasks = tasks.filter(task => task.room.id === currentFilters.room);
     }
 
     if (currentFilters.frequency) {
-      tasks = tasks.filter(task => task.frequency === currentFilters.frequency);
+      tasks = tasks.filter(task => task.frequency_days.type === currentFilters.frequency);
     }
 
     if (currentFilters.category) {
@@ -333,7 +333,7 @@ export class TaskListComponent {
     const groups = new Map<string, AssignedTask[]>();
 
     tasks.forEach(task => {
-      const roomId = task.room_id;
+      const roomId = task.room.id;
       if (!groups.has(roomId)) {
         groups.set(roomId, []);
       }
@@ -345,7 +345,7 @@ export class TaskListComponent {
       roomName: tasks[0].room.name,
       tasks: tasks.sort((a, b) => a.task_template.name.localeCompare(b.task_template.name)),
       dailyDuration: tasks
-        .filter(task => task.frequency === 'daily')
+        .filter(task => task.frequency_days.type === 'daily')
         .reduce((total, task) => total + task.task_template.estimated_duration, 0)
     })).sort((a, b) => a.roomName.localeCompare(b.roomName));
   });
