@@ -544,7 +544,7 @@
   background-color: var(--color-white);
   border-radius: var(--border-radius-2xl);
   box-shadow: var(--shadow-2xl);
-  max-width: 90vw;
+  max-width: 95vw;
   max-height: 90vh;
   overflow: hidden;
   animation: fade-in-scale var(--transition-base) var(--ease-bounce);
@@ -555,7 +555,7 @@
   border-bottom: var(--border-width-1) solid var(--color-border);
   display: flex;
   align-items: center;
-  justify-content: between;
+  justify-content: space-between;
 }
 
 .modal-title {

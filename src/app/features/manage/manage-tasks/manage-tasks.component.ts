@@ -517,7 +517,7 @@ interface TemplateFilters {
     <!-- Modal Modèle de tâche -->
     @if (templateModal().isOpen) {
       <div class="modal-overlay" (click)="closeTemplateModal()">
-        <div class="modal-content max-w-lg" (click)="$event.stopPropagation()">
+        <div class="modal-content" style="width: 800px; max-width: 90vw;" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3 class="modal-title">
               {{ templateModal().mode === 'create' ? 'Créer un modèle' : 'Modifier le modèle' }}
@@ -618,10 +618,14 @@ interface TemplateFilters {
     <!-- Modal Assignation -->
     @if (assignmentModal().isOpen) {
       <div class="modal-overlay" (click)="closeAssignmentModal()">
-        <div class="modal-content max-w-lg" (click)="$event.stopPropagation()">
+        <div class="modal-content" style="width: 800px; max-width: 90vw;" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3 class="modal-title">
-              {{ assignmentModal().mode === 'create' ? 'Assigner une tâche' : 'Modifier l\'assignation' }}
+              @if (assignmentModal().mode === 'create') {
+                Assigner une tâche
+              } @else {
+                Modifier l'assignation
+              }
             </h3>
             <button class="modal-close" (click)="closeAssignmentModal()">✕</button>
           </div>
@@ -1117,19 +1121,30 @@ export class ManageTasksComponent {
     this.savingAssignment.set(true);
     try {
       const formValue = this.assignmentForm.getRawValue();
-      // Correction du type de fréquence
-      const assignmentData: TaskAssignmentForm = {
-        room_id: formValue.room_id,
+      
+      // Validation des champs requis
+      if (!formValue.room_id || !formValue.task_template_id || !formValue.default_performer_id) {
+        console.error('Champs requis manquants:', formValue);
+        return;
+      }
+
+      const timesPerDay = formValue.times_per_day || 1;
+      
+      // Structure corrigée des données d'assignation selon le schéma API
+      const assignmentData = {
         task_template_id: formValue.task_template_id,
+        room_id: formValue.room_id,
         default_performer_id: formValue.default_performer_id,
         frequency_days: {
           type: formValue.frequency_type as 'daily' | 'weekly' | 'monthly',
-          times_per_day: formValue.times_per_day || 1,
-          days: []
+          times_per_day: timesPerDay,
+          days: this.getFrequencyDays(formValue.frequency_type)
         },
-        times_per_day: formValue.times_per_day || 1,
-        suggested_time: formValue.suggested_time || undefined
+        times_per_day: timesPerDay,
+        suggested_time: formValue.suggested_time ? this.parseTimeString(formValue.suggested_time) : undefined
       };
+
+      console.log('Données à envoyer:', assignmentData);
 
       if (this.assignmentModal().mode === 'create') {
         await this.apiService.assignTask(assignmentData);
@@ -1141,6 +1156,10 @@ export class ManageTasksComponent {
       this.closeAssignmentModal();
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
+      // Affichage de l'erreur détaillée pour debug
+      if (error instanceof Error) {
+        console.error('Détails de l\'erreur:', error.message);
+      }
     } finally {
       this.savingAssignment.set(false);
     }
@@ -1199,5 +1218,33 @@ export class ManageTasksComponent {
       monthly: 'badge-primary'
     };
     return classes[frequency as keyof typeof classes] || 'badge-gray';
+  }
+
+  /**
+   * Génère le tableau des jours selon la fréquence
+   */
+  getFrequencyDays(frequencyType: string): number[] {
+    switch (frequencyType) {
+      case 'daily':
+        // Tous les jours de la semaine (0 = dimanche, 1 = lundi, ... 6 = samedi)
+        return [0, 1, 2, 3, 4, 5, 6];
+      case 'weekly':
+        // Par défaut lundi (1) pour les tâches hebdomadaires
+        return [1];
+      case 'monthly':
+        // Premier jour du mois (1)
+        return [1];
+      default:
+        return [1];
+    }
+  }
+
+  /**
+   * Convertit une string de time HTML en format attendu par l'API
+   */
+  parseTimeString(timeString: string): string {
+    // L'input HTML time retourne déjà le format "HH:mm"
+    // L'API Python attend aussi ce format pour le type time
+    return timeString;
   }
 }
