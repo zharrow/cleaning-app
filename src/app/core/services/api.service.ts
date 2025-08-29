@@ -149,13 +149,26 @@ export class ApiService {
       if (!token) return null;
       
       try {
+        // Essayer de récupérer la session existante
         const response = await this.httpGet<CleaningSession>('/sessions/today', {
           headers: { Authorization: `Bearer ${token}` }
         });
         return response;
       } catch (error: any) {
-        // Si pas de session aujourd'hui, retourner null au lieu d'erreur
-        if (error.status === 404) return null;
+        // Si pas de session aujourd'hui (404), la créer automatiquement
+        if (error.status === 404) {
+          try {
+            console.log('🔄 Aucune session trouvée, création automatique...');
+            const newSession = await this.httpPost<CleaningSession>('/sessions/today', {}, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            console.log('✅ Session créée avec succès:', newSession.id);
+            return newSession;
+          } catch (createError: any) {
+            console.error('❌ Erreur lors de la création de session:', createError);
+            throw createError;
+          }
+        }
         throw error;
       }
     }
@@ -356,7 +369,7 @@ export class ApiService {
     task_template_id: string;
     default_performer_id: string;
     frequency_days?: {
-      type: 'daily' | 'weekly' | 'monthly';
+      type: 'daily' | 'weekly' | 'monthly' | 'occasional';
       times_per_day?: number;
       days?: number[];
     };
@@ -366,7 +379,29 @@ export class ApiService {
     const token = await this.authService.getToken();
     if (!token) throw new Error('Non authentifié');
     
-    const response = await this.httpPost<AssignedTask>('/assigned-tasks', assignment, {
+    // Préparer les données au bon format pour l'API
+    const apiData = {
+      task_template_id: assignment.task_template_id,
+      room_id: assignment.room_id,
+      // Gérer le cas où default_performer_id est vide
+      default_performer_id: assignment.default_performer_id && assignment.default_performer_id.trim() 
+        ? assignment.default_performer_id 
+        : null,
+      frequency_days: {
+        type: assignment.frequency_days?.type || 'daily',
+        times_per_day: assignment.frequency_days?.times_per_day || assignment.times_per_day || 1,
+        days: assignment.frequency_days?.days || []
+      },
+      times_per_day: assignment.times_per_day || 1,
+      // Gérer le suggested_time - l'envoyer comme string, l'API le convertira
+      suggested_time: assignment.suggested_time && assignment.suggested_time.trim() 
+        ? assignment.suggested_time 
+        : null
+    };
+    
+    console.log('🔄 Envoi données assignation:', apiData);
+    
+    const response = await this.httpPost<AssignedTask>('/assigned-tasks', apiData, {
       headers: { Authorization: `Bearer ${token}` }
     });
     
@@ -374,7 +409,135 @@ export class ApiService {
     this.assignedTasks.reload();
     return response;
   }
+
+  /**
+   * Alias pour assignTask (compatibilité TaskService)
+   */
+  async createAssignedTask(assignment: any): Promise<AssignedTask> {
+    return this.assignTask(assignment);
+  }
+
+  /**
+   * Récupère tous les performers
+   */
+  async getPerformers(): Promise<any[]> {
+    const token = await this.authService.getToken();
+    if (!token) throw new Error('Non authentifié');
+    
+    return this.httpGet<any[]>('/performers', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  }
+
+  /**
+   * Crée un nouveau performer
+   */
+  async createPerformer(performer: { name: string; is_active?: boolean }): Promise<any> {
+    const token = await this.authService.getToken();
+    if (!token) throw new Error('Non authentifié');
+    
+    return this.httpPost<any>('/performers', performer, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  }
+
+  /**
+   * Met à jour un performer
+   */
+  async updatePerformer(id: string, updates: any): Promise<any> {
+    const token = await this.authService.getToken();
+    if (!token) throw new Error('Non authentifié');
+    
+    return this.httpPut<any>(`/performers/${id}`, updates, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  }
+
+  /**
+   * Met à jour un modèle de tâche
+   */
+  async updateTaskTemplate(id: string, updates: any): Promise<TaskTemplate> {
+    const token = await this.authService.getToken();
+    if (!token) throw new Error('Non authentifié');
+    
+    const response = await this.httpPatch<TaskTemplate>(`/tasks/${id}`, updates, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    this.taskTemplates.reload();
+    return response;
+  }
+
+  /**
+   * Supprime un modèle de tâche
+   */
+  async deleteTaskTemplate(id: string): Promise<void> {
+    const token = await this.authService.getToken();
+    if (!token) throw new Error('Non authentifié');
+    
+    await this.httpDelete(`/tasks/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    this.taskTemplates.reload();
+  }
+
+  /**
+   * Met à jour une tâche assignée
+   */
+  async updateAssignedTask(id: string, updates: any): Promise<AssignedTask> {
+    const token = await this.authService.getToken();
+    if (!token) throw new Error('Non authentifié');
+    
+    const response = await this.httpPatch<AssignedTask>(`/assigned-tasks/${id}`, updates, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    this.assignedTasks.reload();
+    return response;
+  }
+
+  /**
+   * Supprime une tâche assignée
+   */
+  async deleteAssignedTask(id: string): Promise<void> {
+    console.log('🗑️ ApiService.deleteAssignedTask - ID:', id);
+    const token = await this.authService.getToken();
+    if (!token) throw new Error('Non authentifié');
+    
+    console.log('🔑 Token obtenu pour suppression');
+    
+    try {
+      await this.httpDelete(`/assigned-tasks/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log('✅ DELETE /assigned-tasks/' + id + ' réussi');
+      this.assignedTasks.reload();
+      console.log('🔄 assignedTasks.reload() appelé');
+    } catch (error) {
+      console.error('❌ Erreur lors de la suppression de la tâche assignée:', error);
+      throw error;
+    }
+  }
   
+  /**
+   * Créer manuellement la session du jour
+   */
+  async createTodaySession(forceRecreate: boolean = false): Promise<CleaningSession> {
+    const token = await this.authService.getToken();
+    if (!token) throw new Error('Non authentifié');
+    
+    const params = forceRecreate ? '?force_recreate=true' : '';
+    const response = await this.httpPost<CleaningSession>(`/sessions/today${params}`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    // Rafraîchir les données après création
+    this.refreshData();
+    return response;
+  }
+
   /**
    * Upload d'une photo
    */
@@ -465,6 +628,17 @@ export class ApiService {
       });
       
       if (!response.ok) {
+        // Pour les erreurs 422, essayer de récupérer les détails de validation
+        if (response.status === 422) {
+          try {
+            const errorDetails = await response.json();
+            console.error('Erreur de validation 422:', errorDetails);
+            throw new Error(`HTTP 422: ${JSON.stringify(errorDetails)}`);
+          } catch (parseError) {
+            // Si on ne peut pas parser la réponse, retourner l'erreur générique
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+        }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
@@ -497,6 +671,33 @@ export class ApiService {
       return response.json();
     } catch (error) {
       console.error(`PUT ${endpoint} failed:`, error);
+      throw error;
+    }
+  }
+  
+  private async httpPatch<T>(
+    endpoint: string, 
+    data: any, 
+    options: { headers?: HttpHeaders | { [header: string]: string } } = {}
+  ): Promise<T> {
+    try {
+      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers
+        },
+        body: JSON.stringify(data)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error(`PATCH ${endpoint} failed:`, error);
       throw error;
     }
   }

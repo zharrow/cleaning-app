@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ApiService, type CleaningLog, type CleaningSession } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
 
@@ -46,18 +47,39 @@ interface TaskValidationModal {
 @Component({
   selector: 'app-session-today',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="page-container">
       
+      <!-- Bannière d'alerte session active -->
+      @if (currentSession()?.status === 'in_progress') {
+        <div class="session-active-banner animate-fade-in">
+          <div class="flex items-center justify-center gap-3">
+            <div class="session-pulse"></div>
+            <div class="text-center">
+              <p class="font-semibold text-green-800">🟢 Session de nettoyage en cours</p>
+              <p class="text-sm text-green-700">{{ getTotalRoomsCount() }} pièces à nettoyer • {{ getTotalActiveTasksCount() }} tâches en cours</p>
+            </div>
+          </div>
+        </div>
+      }
+
       <!-- En-tête de session -->
       @if (currentSession(); as session) {
         <div class="page-header">
           <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h1 class="page-title">
-                Session du {{ formatDate(session.date) }}
-              </h1>
+              <div class="flex items-center gap-3 mb-2">
+                <h1 class="page-title">
+                  Session du {{ formatDate(session.date) }}
+                </h1>
+                @if (session.status === 'in_progress') {
+                  <div class="status-indicator status-active" title="Session active">
+                    <div class="status-dot"></div>
+                    <span class="status-text">ACTIVE</span>
+                  </div>
+                }
+              </div>
               <p class="page-subtitle">
                 {{ getSessionDescription(session) }}
               </p>
@@ -113,9 +135,67 @@ interface TaskValidationModal {
               La session du jour se crée automatiquement à votre connexion
             </p>
             <div class="text-6xl mb-4">⏳</div>
-            <p class="text-gray-600">
-              Veuillez patienter...
+            <p class="text-gray-600 mb-6">
+              Si la session ne se crée pas automatiquement, cliquez ci-dessous.
             </p>
+            <button 
+              class="btn btn-primary"
+              (click)="createTodaySession()"
+              [disabled]="creatingSession()"
+            >
+              @if (creatingSession()) {
+                <div class="spinner spinner-sm"></div>
+              } @else {
+                <span class="text-lg">🚀</span>
+              }
+              Créer la session du jour
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- Vue d'ensemble des pièces -->
+      @if (currentSession(); as session) {
+        <div class="card mb-6">
+          <div class="card-body">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                🏠 Pièces à nettoyer aujourd'hui
+              </h2>
+              <span class="text-sm text-gray-600">
+                {{ filteredTaskGroups().length }} pièce(s) concernée(s)
+              </span>
+            </div>
+            
+            <!-- Grille des pièces avec statut -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+              @for (group of filteredTaskGroups(); track group.roomId) {
+                <div class="room-card" [class]="getRoomStatusClass(group.progress.percentage)">
+                  <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-medium text-gray-900 truncate">{{ group.roomName }}</h3>
+                    <div class="room-status-icon">
+                      {{ getRoomStatusIcon(group.progress.percentage) }}
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-gray-600">{{ group.progress.completed }}/{{ group.progress.total }} tâches</span>
+                    <span class="font-semibold" [class]="getProgressColorClass(group.progress.percentage)">
+                      {{ group.progress.percentage | number:'1.0-0' }}%
+                    </span>
+                  </div>
+                  
+                  <!-- Mini barre de progression -->
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                    <div 
+                      class="h-1.5 rounded-full transition-all duration-300"
+                      [class]="getProgressBarClass(group.progress.percentage)"
+                      [style.width.%]="group.progress.percentage"
+                    ></div>
+                  </div>
+                </div>
+              }
+            </div>
           </div>
         </div>
       }
@@ -242,6 +322,35 @@ interface TaskValidationModal {
               </div>
             </div>
           }
+        </div>
+      } @else if (currentSession() && filteredTaskGroups().length === 0) {
+        <!-- Session vide - aucune tâche assignée -->
+        <div class="card">
+          <div class="card-body text-center py-12">
+            <span class="text-6xl mb-4 block">📋</span>
+            <h3 class="text-xl font-medium text-gray-900 mb-2">
+              Session créée mais aucune tâche assignée
+            </h3>
+            <p class="text-gray-600 mb-6">
+              La session du jour est active mais aucune tâche n'a encore été assignée aux pièces.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+              <button 
+                class="btn btn-primary"
+                routerLink="/manage/rooms"
+              >
+                <span class="text-lg">🏠</span>
+                Gérer les pièces
+              </button>
+              <button 
+                class="btn btn-secondary"
+                routerLink="/manage/tasks"
+              >
+                <span class="text-lg">⚙️</span>
+                Assigner des tâches
+              </button>
+            </div>
+          </div>
         </div>
       } @else if (filteredTaskGroups().length > 0) {
         <div class="space-y-6">
@@ -515,6 +624,100 @@ interface TaskValidationModal {
       display: block;
     }
 
+    /* Bannière session active */
+    .session-active-banner {
+      background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+      border: 1px solid #34d399;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .session-pulse {
+      width: 12px;
+      height: 12px;
+      background-color: #10b981;
+      border-radius: 50%;
+      animation: session-pulse 2s infinite;
+    }
+
+    @keyframes session-pulse {
+      0%, 100% { 
+        opacity: 1; 
+        transform: scale(1);
+      }
+      50% { 
+        opacity: 0.7; 
+        transform: scale(1.2);
+      }
+    }
+
+    /* Indicateur de statut */
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+    }
+
+    .status-active {
+      background-color: rgba(16, 185, 129, 0.1);
+      color: #059669;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      background-color: currentColor;
+      border-radius: 50%;
+      animation: status-blink 2s infinite;
+    }
+
+    @keyframes status-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Cards des pièces */
+    .room-card {
+      padding: 1rem;
+      border-radius: 0.5rem;
+      border: 2px solid #e5e7eb;
+      transition: all 0.3s ease;
+      background-color: white;
+    }
+
+    .room-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .room-card.room-pending {
+      border-color: #d1d5db;
+      background-color: #f9fafb;
+    }
+
+    .room-card.room-in-progress {
+      border-color: #93c5fd;
+      background-color: #eff6ff;
+    }
+
+    .room-card.room-completed {
+      border-color: #86efac;
+      background-color: #f0fdf4;
+    }
+
+    .room-status-icon {
+      font-size: 1.25rem;
+    }
+
     .progress-bar {
       position: relative;
       overflow: hidden;
@@ -555,6 +758,21 @@ interface TaskValidationModal {
       background-color: rgba(239, 68, 68, 0.05);
       border-color: rgba(239, 68, 68, 0.2);
     }
+
+    @keyframes fade-in {
+      from { 
+        opacity: 0; 
+        transform: translateY(-10px); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateY(0); 
+      }
+    }
+
+    .animate-fade-in {
+      animation: fade-in 0.5s ease-out;
+    }
   `]
 })
 export class SessionTodayComponent {
@@ -566,6 +784,7 @@ export class SessionTodayComponent {
   readonly completingSession = signal(false);
   readonly exportingSession = signal(false);
   readonly savingTask = signal(false);
+  readonly creatingSession = signal(false);
 
   // Filtres
   readonly filters = signal<TaskFilters>({
@@ -717,6 +936,15 @@ export class SessionTodayComponent {
     return session && ['completed', 'incomplete'].includes(session.status);
   });
 
+  // Nouvelles computed properties pour les éléments visuels
+  readonly getTotalRoomsCount = computed(() => {
+    return this.filteredTaskGroups().length;
+  });
+
+  readonly getTotalActiveTasksCount = computed(() => {
+    return this.allTasks().filter(task => ['todo', 'in_progress'].includes(task.status)).length;
+  });
+
   constructor() {
     // Effect pour rafraîchir automatiquement
     effect(() => {
@@ -734,6 +962,21 @@ export class SessionTodayComponent {
   /**
    * Actions principales
    */
+  async createTodaySession(): Promise<void> {
+    if (this.creatingSession()) return;
+
+    this.creatingSession.set(true);
+    try {
+      console.log('🚀 Création manuelle de la session...');
+      await this.apiService.createTodaySession();
+      console.log('✅ Session créée avec succès!');
+    } catch (error) {
+      console.error('❌ Erreur lors de la création de session:', error);
+    } finally {
+      this.creatingSession.set(false);
+    }
+  }
+
   async completeSession(): Promise<void> {
     const session = this.currentSession();
     if (!session || this.completingSession()) return;
@@ -958,5 +1201,44 @@ export class SessionTodayComponent {
       skipped: 'task-row-blocked'
     };
     return classes[status] || '';
+  }
+
+  /**
+   * Nouvelles méthodes pour les éléments visuels des pièces
+   */
+  getRoomStatusClass(progressPercentage: number): string {
+    if (progressPercentage === 100) {
+      return 'room-completed';
+    } else if (progressPercentage > 0) {
+      return 'room-in-progress';
+    }
+    return 'room-pending';
+  }
+
+  getRoomStatusIcon(progressPercentage: number): string {
+    if (progressPercentage === 100) {
+      return '✅';
+    } else if (progressPercentage > 0) {
+      return '🔄';
+    }
+    return '⏳';
+  }
+
+  getProgressColorClass(progressPercentage: number): string {
+    if (progressPercentage === 100) {
+      return 'text-green-600';
+    } else if (progressPercentage > 0) {
+      return 'text-blue-600';
+    }
+    return 'text-gray-500';
+  }
+
+  getProgressBarClass(progressPercentage: number): string {
+    if (progressPercentage === 100) {
+      return 'bg-green-500';
+    } else if (progressPercentage > 0) {
+      return 'bg-blue-500';
+    }
+    return 'bg-gray-400';
   }
 }

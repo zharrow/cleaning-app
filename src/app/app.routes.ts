@@ -125,6 +125,14 @@ export const routes: Routes = [
             title: 'Gestion des pièces - Micro-Crèche'
           },
 
+          // Gestion des intervenants
+          {
+            path: 'performers',
+            loadComponent: () => import('./features/manage/manage-performers/manage-performers.component')
+              .then(m => m.ManagePerformersComponent),
+            title: 'Gestion des intervenants - Micro-Crèche'
+          },
+
           // Gestion des utilisateurs (admin seulement)
           // {
           //   path: 'users',

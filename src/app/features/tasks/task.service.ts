@@ -1,181 +1,245 @@
-// import { Injectable, inject, signal, computed } from '@angular/core';
-// import { ApiService } from '../../core/services/api.service';
-// import { firstValueFrom } from 'rxjs';
+import { Injectable, inject, signal, computed } from '@angular/core';
+import { ApiService } from '../../core/services/api.service';
 
-// export interface TaskTemplate {
-//   id: string;
-//   name: string;
-//   description?: string;
-//   is_active: boolean;
-//   created_at: string;
-// }
+export interface TaskTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  estimated_duration?: number;
+  is_active?: boolean;
+  created_at: string;
+  updated_at?: string;
+}
 
-// export interface Room {
-//   id: string;
-//   name: string;
-//   description?: string;
-//   display_order: number;
-//   is_active: boolean;
-// }
+export interface Room {
+  id: string;
+  name: string;
+  description?: string;
+  order: number;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
 
-// export interface Performer {
-//   id: string;
-//   name: string;
-//   is_active: boolean;
-//   created_at: string;
-// }
+export interface Performer {
+  id: string;
+  name: string;
+  is_active?: boolean;
+  created_at?: string;
+}
 
-// export interface AssignedTask {
-//   id: string;
-//   task_template: TaskTemplate;
-//   room: Room;
-//   default_performer: Performer;
-//   frequency_days: number;
-//   times_per_day: number;
-//   suggested_time?: string;
-//   is_active: boolean;
-//   created_at: string;
-// }
+export interface FrequencyConfig {
+  type: 'daily' | 'weekly' | 'monthly' | 'occasional';
+  times_per_day: number;
+  days: number[];
+}
 
-// @Injectable({ providedIn: 'root' })
-// export class TaskService {
-//   private api = inject(ApiService);
+export interface AssignedTask {
+  id: string;
+  task_template: TaskTemplate;
+  room: Room;
+  default_performer?: {
+    id: string;
+    name: string;
+  };
+  frequency_days: FrequencyConfig;
+  times_per_day: number;
+  suggested_time?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+@Injectable({ providedIn: 'root' })
+export class TaskService {
+  private api = inject(ApiService);
   
-//   // Signals
-//   taskTemplates = signal<TaskTemplate[]>([]);
-//   assignedTasks = signal<AssignedTask[]>([]);
-//   rooms = signal<Room[]>([]);
-//   performers = signal<Performer[]>([]);
-//   isLoading = signal(false);
+  // Signals locaux
+  performers = signal<Performer[]>([]);
+  isLoading = signal(false);
   
-//   // Computed
-//   activeTasksCount = computed(() => 
-//     this.assignedTasks().filter(t => t.is_active).length
-//   );
+  // Computed properties qui utilisent directement l'ApiService
+  taskTemplates = computed(() => this.api.taskTemplates.value() || []);
+  assignedTasks = computed(() => this.api.assignedTasks.value() || []);
+  rooms = computed(() => this.api.rooms.value() || []);
   
-//   tasksByRoom = computed(() => {
-//     const tasks = this.assignedTasks();
-//     const grouped = new Map<string, AssignedTask[]>();
-    
-//     tasks.forEach(task => {
-//       const roomId = task.room.id;
-//       if (!grouped.has(roomId)) {
-//         grouped.set(roomId, []);
-//       }
-//       grouped.get(roomId)!.push(task);
-//     });
-    
-//     return grouped;
-//   });
+  // Computed
+  activeTasksCount = computed(() => 
+    this.assignedTasks().filter(t => t.is_active).length
+  );
   
-//   async loadAllData(): Promise<void> {
-//     this.isLoading.set(true);
-    
-//     try {
-//       const [templates, assigned, rooms, performers] = await Promise.all([
-//         firstValueFrom(this.api.get<TaskTemplate[]>('task-templates')),
-//         firstValueFrom(this.api.get<AssignedTask[]>('assigned-tasks')),
-//         firstValueFrom(this.api.get<Room[]>('rooms')),
-//         firstValueFrom(this.api.get<Performer[]>('performers'))
-//       ]);
+  tasksByRoom = computed(() => {
+    const tasks = this.assignedTasks();
+    const grouped = new Map<string, AssignedTask[]>();
+   
+    tasks.forEach(task => {
+      const roomId = task.room.id;
+      if (!grouped.has(roomId)) {
+        grouped.set(roomId, []);
+      }
+      grouped.get(roomId)!.push(task);
+    });
+   
+    return grouped;
+  });
+  
+  async loadAllData(): Promise<void> {
+    this.isLoading.set(true);
+   
+    try {
+      // Use the ApiService resources directly - plus besoin de copier les données
+      // Les computed properties vont utiliser directement l'ApiService
       
-//       this.taskTemplates.set(templates);
-//       this.assignedTasks.set(assigned);
-//       this.rooms.set(rooms);
-//       this.performers.set(performers);
-//     } finally {
-//       this.isLoading.set(false);
-//     }
-//   }
+      // Charger les performers depuis l'API
+      await this.loadPerformers();
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
   
-//   async createTaskTemplate(task: Partial<TaskTemplate>): Promise<TaskTemplate> {
-//     const newTask = await firstValueFrom(
-//       this.api.post<TaskTemplate>('task-templates', task)
-//     );
-    
-//     this.taskTemplates.update(tasks => [...tasks, newTask]);
-//     return newTask;
-//   }
+  private async loadPerformers(): Promise<void> {
+    try {
+      const performers = await this.api.getPerformers();
+      this.performers.set(performers);
+    } catch (error) {
+      console.error('Erreur lors du chargement des performers:', error);
+      // Si aucun performer n'existe, créer des performers par défaut
+      console.log('Aucun performer trouvé, création de performers par défaut...');
+      await this.createDefaultPerformers();
+    }
+  }
   
-//   // Create an assigned task by linking an existing template to a room/performer
-//   async assignTask(assignment: {
-//     task_template_id: string;
-//     room_id: string;
-//     default_performer_id: string;
-//     frequency_days?: number;
-//     times_per_day?: number;
-//     suggested_time?: string;
-//     is_active?: boolean;
-//   }): Promise<AssignedTask> {
-//     const newAssignment = await firstValueFrom(
-//       this.api.post<AssignedTask>('assigned-tasks', assignment)
-//     );
+  private async createDefaultPerformers(): Promise<void> {
+    const defaultPerformers = [
+      { name: 'Marie Dupont' },
+      { name: 'Pierre Martin' },
+      { name: 'Sophie Bernard' }
+    ];
     
-//     this.assignedTasks.update(tasks => [...tasks, newAssignment]);
-//     return newAssignment;
-//   }
+    try {
+      for (const performerData of defaultPerformers) {
+        await this.createPerformer(performerData);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la création des performers par défaut:', error);
+    }
+  }
   
-//   async createRoom(room: Partial<Room>): Promise<Room> {
-//     const newRoom = await firstValueFrom(
-//       this.api.post<Room>('rooms', room)
-//     );
-    
-//     this.rooms.update(rooms => [...rooms, newRoom]);
-//     return newRoom;
-//   }
+  async createTaskTemplate(task: Partial<TaskTemplate>): Promise<TaskTemplate> {
+    if (!task.name) {
+      throw new Error('Task name is required');
+    }
+    const taskData = {
+      name: task.name,
+      description: task.description,
+      category: task.category || 'general',
+      estimated_duration: task.estimated_duration || 15
+    };
+    const newTask = await this.api.createTaskTemplate(taskData);
+    // Plus besoin d'update car taskTemplates utilise directement l'ApiService
+    return newTask;
+  }
   
-//   async createPerformer(performer: Partial<Performer>): Promise<Performer> {
-//     const newPerformer = await firstValueFrom(
-//       this.api.post<Performer>('performers', performer)
-//     );
-    
-//     this.performers.update(performers => [...performers, newPerformer]);
-//     return newPerformer;
-//   }
+  async assignTask(assignment: {
+    task_template_id: string;
+    room_id: string;
+    default_performer_id: string;
+    frequency_days?: FrequencyConfig;
+    times_per_day?: number;
+    suggested_time?: string;
+    is_active?: boolean;
+  }): Promise<AssignedTask> {
+    const newAssignment = await this.api.createAssignedTask(assignment);
+    // Plus besoin d'update car assignedTasks utilise directement l'ApiService
+    return newAssignment;
+  }
+  
+  async createRoom(room: Partial<Room>): Promise<Room> {
+    if (!room.name) {
+      throw new Error('Room name is required');
+    }
+    const roomData = {
+      name: room.name,
+      description: room.description,
+      order: room.order || 0
+    };
+    const newRoom = await this.api.createRoom(roomData);
+    // Plus besoin d'update car rooms utilise directement l'ApiService
+    return newRoom;
+  }
 
-//   // Update methods
-//   async updateRoom(roomId: string, updates: Partial<Room>): Promise<Room> {
-//     const updated = await firstValueFrom(
-//       this.api.put<Room>(`rooms/${roomId}`, updates)
-//     );
-//     this.rooms.update(list => list.map(r => (r.id === updated.id ? updated : r)));
-//     return updated;
-//   }
+  async updateRoom(roomId: string, updates: Partial<Room>): Promise<Room> {
+    const updated = await this.api.updateRoom(roomId, updates);
+    // Plus besoin d'update car rooms utilise directement l'ApiService
+    return updated;
+  }
 
-//   async deleteRoom(roomId: string): Promise<void> {
-//     await firstValueFrom(this.api.delete<void>(`rooms/${roomId}`));
-//     this.rooms.update(list => list.filter(r => r.id !== roomId));
-//     // Optionally refresh assigned tasks if backend cascades; keeping it simple here
-//   }
+  async deleteRoom(roomId: string): Promise<void> {
+    await this.api.deleteRoom(roomId);
+    // Plus besoin d'update car rooms utilise directement l'ApiService
+  }
 
-//   async updateTaskTemplate(id: string, updates: Partial<TaskTemplate>): Promise<TaskTemplate> {
-//     const updated = await firstValueFrom(
-//       this.api.put<TaskTemplate>(`task-templates/${id}`, updates)
-//     );
-//     this.taskTemplates.update(list => list.map(t => (t.id === updated.id ? updated : t)));
-//     return updated;
-//   }
+  async updateTaskTemplate(id: string, updates: Partial<TaskTemplate>): Promise<TaskTemplate> {
+    const updated = await this.api.updateTaskTemplate(id, updates);
+    // Plus besoin d'update car taskTemplates utilise directement l'ApiService
+    return updated;
+  }
 
-//   async deleteTaskTemplate(id: string): Promise<void> {
-//     await firstValueFrom(this.api.delete<void>(`task-templates/${id}`));
-//     this.taskTemplates.update(list => list.filter(t => t.id !== id));
-//   }
+  async deleteTaskTemplate(id: string): Promise<void> {
+    await this.api.deleteTaskTemplate(id);
+    // Plus besoin d'update car taskTemplates utilise directement l'ApiService
+  }
 
-//   async updateAssignedTask(id: string, updates: Partial<AssignedTask> & {
-//     // Allow id-based updates too
-//     task_template_id?: string;
-//     room_id?: string;
-//     default_performer_id?: string;
-//   }): Promise<AssignedTask> {
-//     const updated = await firstValueFrom(
-//       this.api.put<AssignedTask>(`assigned-tasks/${id}`, updates)
-//     );
-//     this.assignedTasks.update(list => list.map(a => (a.id === updated.id ? updated : a)));
-//     return updated;
-//   }
+  async updateAssignedTask(id: string, updates: any): Promise<AssignedTask> {
+    const updated = await this.api.updateAssignedTask(id, updates);
+    // Plus besoin d'update car assignedTasks utilise directement l'ApiService
+    return updated;
+  }
 
-//   async deleteAssignedTask(id: string): Promise<void> {
-//     await firstValueFrom(this.api.delete<void>(`assigned-tasks/${id}`));
-//     this.assignedTasks.update(list => list.filter(a => a.id !== id));
-//   }
-// }
+  async deleteAssignedTask(id: string): Promise<void> {
+    await this.api.deleteAssignedTask(id);
+    // Plus besoin d'update car assignedTasks utilise directement l'ApiService
+  }
+
+  async createPerformer(performer: Partial<Performer>): Promise<Performer> {
+    try {
+      const newPerformer = await this.api.createPerformer({
+        name: performer.name!,
+        is_active: performer.is_active ?? true
+      });
+      
+      // Mettre à jour la liste locale
+      const currentPerformers = this.performers();
+      this.performers.set([...currentPerformers, newPerformer]);
+
+      return newPerformer;
+    } catch (error) {
+      console.error('Erreur lors de la création du performer:', error);
+      throw error;
+    }
+  }
+
+  async updatePerformer(id: string, updates: Partial<Performer>): Promise<Performer> {
+    try {
+      const updatedPerformer = await this.api.updatePerformer(id, updates);
+      
+      // Mettre à jour la liste locale
+      const currentPerformers = this.performers();
+      const updatedPerformers = currentPerformers.map(p => 
+        p.id === id ? updatedPerformer : p
+      );
+      this.performers.set(updatedPerformers);
+      
+      return updatedPerformer;
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du performer:', error);
+      throw error;
+    }
+  }
+
+  async deletePerformer(id: string): Promise<void> {
+    const currentPerformers = this.performers();
+    const filteredPerformers = currentPerformers.filter(p => p.id !== id);
+    this.performers.set(filteredPerformers);
+  }
+}

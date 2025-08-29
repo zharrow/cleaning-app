@@ -8,6 +8,7 @@ import {
   type Room 
 } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { TaskService, Performer } from '../../tasks/task.service';
 
 /**
  * Interface pour les formulaires de création/édition
@@ -695,19 +696,13 @@ interface TemplateFilters {
                 </div>
                 
                 <div class="form-group">
-                  <label class="form-label required">Exécutant par défaut</label>
-                  <input 
-                    type="text"
-                    class="form-input"
-                    formControlName="default_performer_id"
-                    placeholder="Nom de l'exécutant habituel"
-                    list="performers-list"
-                  />
-                  <datalist id="performers-list">
-                    @for (performer of availablePerformers(); track performer) {
-                      <option [value]="performer">{{ performer }}</option>
+                  <label class="form-label">Exécutant par défaut</label>
+                  <select class="form-input form-select" formControlName="default_performer_id">
+                    <option value="">Aucun exécutant spécifique</option>
+                    @for (performer of availablePerformers(); track performer.id) {
+                      <option [value]="performer.id">{{ performer.name }}</option>
                     }
-                  </datalist>
+                  </select>
                 </div>
               </div>
             </div>
@@ -797,6 +792,7 @@ export class ManageTasksComponent {
   // Services injectés
   private readonly apiService = inject(ApiService);
   readonly authService = inject(AuthService);
+  private readonly taskService = inject(TaskService);
   private readonly fb = inject(FormBuilder);
 
   constructor() {
@@ -805,6 +801,7 @@ export class ManageTasksComponent {
     this.apiService.taskTemplates.reload();
     this.apiService.assignedTasks.reload();
     this.apiService.rooms.reload();
+    this.taskService.loadAllData();
   }
 
   // Signals d'état
@@ -848,7 +845,7 @@ export class ManageTasksComponent {
   readonly assignmentForm = this.fb.nonNullable.group({
     room_id: ['', [Validators.required]],
     task_template_id: ['', [Validators.required]],
-    default_performer_id: ['', [Validators.required]],
+    default_performer_id: [''], // Optionnel - peut être vide
     frequency_type: ['daily', [Validators.required]],
     times_per_day: [1, [Validators.required, Validators.min(1)]],
     suggested_time: ['']
@@ -880,17 +877,7 @@ export class ManageTasksComponent {
   });
 
   readonly availablePerformers = computed(() => {
-    const performers = new Set<string>();
-    this.assignedTasks().forEach(task => {
-      if (task.default_performer?.name) {
-        performers.add(task.default_performer.name);
-      }
-    });
-    // Ajouter quelques performers par défaut
-    performers.add('Marie Dupont');
-    performers.add('Pierre Martin');
-    performers.add('Sophie Bernard');
-    return Array.from(performers).sort();
+    return this.taskService.performers().filter(p => p.is_active);
   });
 
   // Données filtrées
@@ -1070,10 +1057,12 @@ export class ManageTasksComponent {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce modèle ?')) return;
 
     try {
-      // TODO: Implémenter la suppression
-      console.log('Delete template:', templateId);
+      console.log('🗑️ Suppression du modèle de tâche:', templateId);
+      await this.apiService.deleteTaskTemplate(templateId);
+      console.log('✅ Modèle de tâche supprimé avec succès');
     } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
+      console.error('❌ Erreur lors de la suppression du modèle:', error);
+      alert('Erreur lors de la suppression du modèle de tâche');
     }
     this.openMenuId.set(null);
   }
