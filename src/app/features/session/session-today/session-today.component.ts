@@ -2,8 +2,22 @@ import { Component, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { ApiService, type CleaningLog, type CleaningSession } from '../../../core/services/api.service';
+import { ApiService, type CleaningLog, type CleaningSession, type AssignedTask } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
+
+/**
+ * Interface pour une tâche de session (AssignedTask avec statut temporaire)
+ */
+interface SessionTask {
+  readonly id: string;
+  readonly assignedTask: AssignedTask;
+  status: 'todo' | 'in_progress' | 'done' | 'partial' | 'skipped' | 'blocked';
+  performed_by?: string;
+  notes?: string;
+  photos?: string[];
+  started_at?: string;
+  completed_at?: string;
+}
 
 /**
  * Interface pour les groupes de tâches par pièce
@@ -11,7 +25,7 @@ import { AuthService } from '../../../core/services/auth.service';
 interface RoomTaskGroup {
   readonly roomId: string;
   readonly roomName: string;
-  readonly tasks: CleaningLog[];
+  readonly tasks: SessionTask[];
   readonly progress: {
     readonly completed: number;
     readonly total: number;
@@ -19,22 +33,14 @@ interface RoomTaskGroup {
   };
 }
 
-/**
- * Interface pour les filtres
- */
-interface TaskFilters {
-  status: 'all' | 'todo' | 'in_progress' | 'done' | 'blocked';
-  room: string;
-  performer: string;
-}
 
 /**
  * Interface pour le modal de validation de tâche
  */
 interface TaskValidationModal {
   isOpen: boolean;
-  task: CleaningLog | null;
-  status: CleaningLog['status'];
+  task: SessionTask | null;
+  status: SessionTask['status'];
   performer: string;
   notes: string;
   photos: File[];
@@ -163,13 +169,13 @@ interface TaskValidationModal {
                 🏠 Pièces à nettoyer aujourd'hui
               </h2>
               <span class="text-sm text-gray-600">
-                {{ filteredTaskGroups().length }} pièce(s) concernée(s)
+                {{ taskGroups().length }} pièce(s) concernée(s)
               </span>
             </div>
             
             <!-- Grille des pièces avec statut -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
-              @for (group of filteredTaskGroups(); track group.roomId) {
+              @for (group of taskGroups(); track group.roomId) {
                 <div class="room-card" [class]="getRoomStatusClass(group.progress.percentage)">
                   <div class="flex items-center justify-between mb-2">
                     <h3 class="font-medium text-gray-900 truncate">{{ group.roomName }}</h3>
@@ -200,109 +206,6 @@ interface TaskValidationModal {
         </div>
       }
 
-      <!-- Progression globale -->
-      @if (globalProgress(); as progress) {
-        <div class="card mb-8">
-          <div class="card-body">
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold text-gray-900">
-                Progression globale
-              </h2>
-              <span class="text-lg font-bold text-primary-600">
-                {{ progress.percentage | number:'1.0-0' }}%
-              </span>
-            </div>
-            
-            <!-- Barre de progression -->
-            <div class="w-full bg-gray-200 rounded-full h-4 mb-4 progress-bar">
-              <div 
-                class="bg-gradient-to-r from-primary-500 to-primary-600 h-4 rounded-full transition-all duration-500 ease-out"
-                [style.width.%]="progress.percentage"
-              ></div>
-            </div>
-            
-            <!-- Statistiques détaillées -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-              @for (stat of progressStats(); track stat.label) {
-                <div class="text-center">
-                  <div 
-                    class="w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-semibold"
-                    [style.background-color]="stat.color"
-                  >
-                    {{ stat.count }}
-                  </div>
-                  <p class="text-sm text-gray-600">{{ stat.label }}</p>
-                </div>
-              }
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- Filtres -->
-      @if (allTasks().length > 0) {
-        <div class="card mb-6">
-          <div class="card-body">
-            <div class="flex flex-col md:flex-row gap-4">
-              <!-- Filtre par statut -->
-              <div class="flex-1">
-                <label class="form-label text-sm">Statut</label>
-                <select 
-                  class="form-input form-select"
-                  [value]="filters().status"
-                  (change)="updateFilter('status', $event)"
-                >
-                  <option value="all">Tous les statuts</option>
-                  <option value="todo">À faire</option>
-                  <option value="in_progress">En cours</option>
-                  <option value="done">Terminé</option>
-                  <option value="blocked">Bloqué</option>
-                </select>
-              </div>
-              
-              <!-- Filtre par pièce -->
-              <div class="flex-1">
-                <label class="form-label text-sm">Pièce</label>
-                <select 
-                  class="form-input form-select"
-                  [value]="filters().room"
-                  (change)="updateFilter('room', $event)"
-                >
-                  <option value="">Toutes les pièces</option>
-                  @for (room of availableRooms(); track room.id) {
-                    <option [value]="room.id">{{ room.name }}</option>
-                  }
-                </select>
-              </div>
-              
-              <!-- Filtre par exécutant -->
-              <div class="flex-1">
-                <label class="form-label text-sm">Exécutant</label>
-                <select 
-                  class="form-input form-select"
-                  [value]="filters().performer"
-                  (change)="updateFilter('performer', $event)"
-                >
-                  <option value="">Tous les exécutants</option>
-                  @for (performer of availablePerformers(); track performer) {
-                    <option [value]="performer">{{ performer }}</option>
-                  }
-                </select>
-              </div>
-              
-              <!-- Bouton reset -->
-              <div class="flex items-end">
-                <button 
-                  class="btn btn-secondary"
-                  (click)="resetFilters()"
-                >
-                  Reset
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      }
 
       <!-- Liste des tâches groupées par pièce -->
       @if (isLoading()) {
@@ -323,7 +226,7 @@ interface TaskValidationModal {
             </div>
           }
         </div>
-      } @else if (currentSession() && filteredTaskGroups().length === 0) {
+      } @else if (currentSession() && taskGroups().length === 0) {
         <!-- Session vide - aucune tâche assignée -->
         <div class="card">
           <div class="card-body text-center py-12">
@@ -352,9 +255,9 @@ interface TaskValidationModal {
             </div>
           </div>
         </div>
-      } @else if (filteredTaskGroups().length > 0) {
+      } @else if (taskGroups().length > 0) {
         <div class="space-y-6">
-          @for (group of filteredTaskGroups(); track group.roomId) {
+          @for (group of taskGroups(); track group.roomId) {
             <div class="card animate-fade-in">
               <div class="card-header">
                 <div class="flex items-center justify-between">
@@ -399,16 +302,16 @@ interface TaskValidationModal {
                       <!-- Informations de la tâche -->
                       <div class="flex-1">
                         <h4 class="font-medium text-gray-900 mb-1">
-                          {{ task.assigned_task.task_template.name }}
+                          {{ task.assignedTask.task_template.name }}
                         </h4>
-                        @if (task.assigned_task.task_template.description) {
+                        @if (task.assignedTask.task_template.description) {
                           <p class="text-sm text-gray-600 mb-2">
-                            {{ task.assigned_task.task_template.description }}
+                            {{ task.assignedTask.task_template.description }}
                           </p>
                         }
                         
                         <div class="flex items-center gap-4 text-sm text-gray-500">
-                          <span>⏱️ {{ task.assigned_task.task_template.estimated_duration }}min</span>
+                          <span>⏱️ {{ task.assignedTask.task_template.estimated_duration }}min</span>
                           @if (task.performed_by) {
                             <span>👤 {{ task.performed_by }}</span>
                           }
@@ -466,18 +369,18 @@ interface TaskValidationModal {
         <!-- Aucune tâche trouvée -->
         <div class="card">
           <div class="card-body text-center py-12">
-            <span class="text-6xl mb-4 block">🔍</span>
+            <span class="text-6xl mb-4 block">📋</span>
             <h3 class="text-xl font-medium text-gray-900 mb-2">
-              Aucune tâche trouvée
+              Aucune tâche assignée
             </h3>
             <p class="text-gray-600 mb-4">
-              Modifiez vos filtres pour voir plus de résultats.
+              Il n'y a actuellement aucune tâche assignée aux pièces.
             </p>
             <button 
-              class="btn btn-secondary"
-              (click)="resetFilters()"
+              class="btn btn-primary"
+              routerLink="/manage/tasks"
             >
-              Réinitialiser les filtres
+              Assigner des tâches
             </button>
           </div>
         </div>
@@ -490,7 +393,7 @@ interface TaskValidationModal {
         <div class="modal-content max-w-2xl" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3 class="modal-title">
-              Valider la tâche : {{ taskModal().task!.assigned_task.task_template.name }}
+              Valider la tâche : {{ taskModal().task!.assignedTask.task_template.name }}
             </h3>
             <button 
               class="modal-close"
@@ -532,9 +435,9 @@ interface TaskValidationModal {
                   list="performers-list"
                 />
                 <datalist id="performers-list">
-                  @for (performer of availablePerformers(); track performer) {
-                    <option [value]="performer">{{ performer }}</option>
-                  }
+                  <option value="Marie Dupont">Marie Dupont</option>
+                  <option value="Pierre Martin">Pierre Martin</option>
+                  <option value="Sophie Bernard">Sophie Bernard</option>
                 </datalist>
               </div>
               
@@ -786,12 +689,6 @@ export class SessionTodayComponent {
   readonly savingTask = signal(false);
   readonly creatingSession = signal(false);
 
-  // Filtres
-  readonly filters = signal<TaskFilters>({
-    status: 'all',
-    room: '',
-    performer: ''
-  });
 
   // Modal de validation de tâche
   readonly taskModal = signal<TaskValidationModal>({
@@ -805,73 +702,52 @@ export class SessionTodayComponent {
 
   // Computed signals depuis l'API
   readonly currentSession = computed(() => this.apiService.todaySession.value());
-  readonly allTasks = computed(() => this.apiService.todayLogs.value() || []);
+  readonly assignedTasks = computed(() => this.apiService.assignedTasks.value() || []);
   readonly isLoading = computed(() => 
-    this.apiService.todaySession.isLoading() || this.apiService.todayLogs.isLoading()
+    this.apiService.todaySession.isLoading() || this.apiService.assignedTasks.isLoading()
   );
 
-  // Progress calculations
-  readonly globalProgress = computed(() => this.apiService.todayProgress());
+  // Signal pour stocker les statuts temporaires des tâches de la session
+  private readonly taskStatuses = signal<Map<string, Partial<SessionTask>>>(new Map());
 
-  readonly progressStats = computed(() => {
-    const tasks = this.allTasks();
-    return [
-      {
-        label: 'À faire',
-        count: tasks.filter(t => t.status === 'todo').length,
-        color: '#9CA3AF'
-      },
-      {
-        label: 'En cours',
-        count: tasks.filter(t => t.status === 'in_progress').length,
-        color: '#3B82F6'
-      },
-      {
-        label: 'Terminé',
-        count: tasks.filter(t => t.status === 'done').length,
-        color: '#10B981'
-      },
-      {
-        label: 'Bloqué',
-        count: tasks.filter(t => ['blocked', 'skipped'].includes(t.status)).length,
-        color: '#EF4444'
-      }
-    ];
-  });
-
-  // Filtered data
-  readonly filteredTasks = computed(() => {
-    const tasks = this.allTasks();
-    const filters = this.filters();
-
-    return tasks.filter(task => {
-      // Filtre par statut
-      if (filters.status !== 'all' && task.status !== filters.status) {
-        return false;
-      }
-
-      // Filtre par pièce
-      if (filters.room && task.assigned_task.room_id !== filters.room) {
-        return false;
-      }
-
-      // Filtre par exécutant
-      if (filters.performer && task.performed_by !== filters.performer) {
-        return false;
-      }
-
-      return true;
+  // Transformer les AssignedTask en SessionTask avec statuts temporaires
+  readonly allTasks = computed((): SessionTask[] => {
+    const assigned = this.assignedTasks();
+    const statuses = this.taskStatuses();
+    
+    return assigned.map(assignedTask => {
+      const taskId = assignedTask.id;
+      const temporaryStatus = statuses.get(taskId) || {};
+      
+      return {
+        id: taskId,
+        assignedTask,
+        status: temporaryStatus.status || 'todo',
+        performed_by: temporaryStatus.performed_by || assignedTask.default_performer?.name,
+        notes: temporaryStatus.notes,
+        photos: temporaryStatus.photos,
+        started_at: temporaryStatus.started_at,
+        completed_at: temporaryStatus.completed_at
+      } as SessionTask;
     });
   });
 
-  readonly filteredTaskGroups = computed((): RoomTaskGroup[] => {
-    const tasks = this.filteredTasks();
-    const groupsMap = new Map<string, CleaningLog[]>();
+  // Progress calculations
+  readonly globalProgress = computed(() => {
+    const tasks = this.allTasks();
+    const completed = tasks.filter(task => task.status === 'done').length;
+    const total = tasks.length;
+    return { completed, total, percentage: total > 0 ? (completed / total) * 100 : 0 };
+  });
+
+
+  readonly taskGroups = computed((): RoomTaskGroup[] => {
+    const tasks = this.allTasks();
+    const groupsMap = new Map<string, SessionTask[]>();
 
     // Grouper par pièce
     tasks.forEach(task => {
-      const roomId = task.assigned_task.room_id || task.assigned_task.room.id;
-      const roomName = task.assigned_task.room.name;
+      const roomId = task.assignedTask.room_id || task.assignedTask.room.id;
       
       if (!groupsMap.has(roomId)) {
         groupsMap.set(roomId, []);
@@ -886,8 +762,8 @@ export class SessionTodayComponent {
       
       return {
         roomId,
-        roomName: tasks[0].assigned_task.room.name,
-        tasks: tasks.sort((a, b) => a.assigned_task.task_template.name.localeCompare(b.assigned_task.task_template.name)),
+        roomName: tasks[0].assignedTask.room.name,
+        tasks: tasks.sort((a, b) => a.assignedTask.task_template.name.localeCompare(b.assignedTask.task_template.name)),
         progress: {
           completed,
           total,
@@ -897,29 +773,6 @@ export class SessionTodayComponent {
     }).sort((a, b) => a.roomName.localeCompare(b.roomName));
   });
 
-  // Options pour les filtres
-  readonly availableRooms = computed(() => {
-    const rooms = new Map<string, { id: string, name: string }>();
-    this.allTasks().forEach(task => {
-      const room = task.assigned_task.room;
-      rooms.set(room.id, { id: room.id, name: room.name });
-    });
-    return Array.from(rooms.values()).sort((a, b) => a.name.localeCompare(b.name));
-  });
-
-  readonly availablePerformers = computed(() => {
-    const performers = new Set<string>();
-    this.allTasks().forEach(task => {
-      if (task.performed_by) {
-        performers.add(task.performed_by);
-      }
-    });
-    // Ajouter quelques performers par défaut
-    performers.add('Marie Dupont');
-    performers.add('Pierre Martin');
-    performers.add('Sophie Bernard');
-    return Array.from(performers).sort();
-  });
 
   // Permissions
   readonly canCompleteSession = computed(() => {
@@ -938,7 +791,7 @@ export class SessionTodayComponent {
 
   // Nouvelles computed properties pour les éléments visuels
   readonly getTotalRoomsCount = computed(() => {
-    return this.filteredTaskGroups().length;
+    return this.taskGroups().length;
   });
 
   readonly getTotalActiveTasksCount = computed(() => {
@@ -1012,31 +865,11 @@ export class SessionTodayComponent {
     }
   }
 
-  /**
-   * Gestion des filtres
-   */
-  updateFilter(field: keyof TaskFilters, event: Event): void {
-    const target = event.target as HTMLSelectElement;
-    const value = target.value;
-    
-    this.filters.update(filters => ({
-      ...filters,
-      [field]: value
-    }));
-  }
-
-  resetFilters(): void {
-    this.filters.set({
-      status: 'all',
-      room: '',
-      performer: ''
-    });
-  }
 
   /**
    * Gestion du modal de tâche
    */
-  openTaskModal(task: CleaningLog): void {
+  openTaskModal(task: SessionTask): void {
     this.taskModal.set({
       isOpen: true,
       task,
@@ -1081,13 +914,23 @@ export class SessionTodayComponent {
         photoUrls.push(url);
       }
 
-      // Mise à jour de la tâche
-      await this.apiService.updateCleaningLog(modal.task.id, {
+      // Mettre à jour le statut temporaire dans taskStatuses
+      const taskId = modal.task.id;
+      const currentStatuses = this.taskStatuses();
+      const updatedStatuses = new Map(currentStatuses);
+      
+      updatedStatuses.set(taskId, {
         status: modal.status,
         performed_by: modal.performer || undefined,
         notes: modal.notes || undefined,
-        photos: photoUrls.length > 0 ? photoUrls : undefined
+        photos: photoUrls.length > 0 ? photoUrls : undefined,
+        completed_at: modal.status === 'done' ? new Date().toISOString() : undefined,
+        started_at: modal.status === 'in_progress' && !modal.task.started_at ? new Date().toISOString() : modal.task.started_at
       });
+      
+      this.taskStatuses.set(updatedStatuses);
+      
+      console.log('✅ Statut de tâche mis à jour localement:', { taskId, status: modal.status });
 
       this.closeTaskModal();
     } catch (error) {

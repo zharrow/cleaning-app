@@ -159,10 +159,11 @@ export class ApiService {
         if (error.status === 404) {
           try {
             console.log('🔄 Aucune session trouvée, création automatique...');
+            
             const newSession = await this.httpPost<CleaningSession>('/sessions/today', {}, {
               headers: { Authorization: `Bearer ${token}` }
             });
-            console.log('✅ Session créée avec succès:', newSession.id);
+            console.log('✅ Session créée:', newSession.id);
             return newSession;
           } catch (createError: any) {
             console.error('❌ Erreur lors de la création de session:', createError);
@@ -533,9 +534,14 @@ export class ApiService {
     if (!token) throw new Error('Non authentifié');
     
     const params = forceRecreate ? '?force_recreate=true' : '';
+    
+    console.log('🔄 Création manuelle de session...');
+    
     const response = await this.httpPost<CleaningSession>(`/sessions/today${params}`, {}, {
       headers: { Authorization: `Bearer ${token}` }
     });
+    
+    console.log('✅ Session créée:', response);
     
     // Rafraîchir les données après création
     this.refreshData();
