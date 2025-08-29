@@ -240,6 +240,7 @@ export class ApiService {
       const response = await this.httpGet<TaskTemplate[]>('/tasks', {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
       console.log('✅ TaskTemplates chargés:', response);
       return response;
     }
@@ -358,6 +359,7 @@ export class ApiService {
     // Rafraîchir seulement les templates de tâches, pas les sessions
     console.log('📋 TaskTemplate créé, rechargement des templates...', response);
     this.taskTemplates.reload();
+    
     return response;
   }
   
@@ -460,11 +462,13 @@ export class ApiService {
     const token = await this.authService.getToken();
     if (!token) throw new Error('Non authentifié');
     
-    const response = await this.httpPatch<TaskTemplate>(`/tasks/${id}`, updates, {
+    const response = await this.httpPut<TaskTemplate>(`/tasks/${id}`, updates, {
       headers: { Authorization: `Bearer ${token}` }
     });
     
+    console.log('📋 TaskTemplate modifié, rechargement des templates...', response);
     this.taskTemplates.reload();
+    
     return response;
   }
 

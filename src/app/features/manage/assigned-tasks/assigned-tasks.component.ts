@@ -46,7 +46,7 @@ import { TaskService, AssignedTask, TaskTemplate, Room, Performer, FrequencyConf
             <tbody class="bg-white divide-y divide-gray-200">
               <tr *ngFor="let task of taskService.assignedTasks()">
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm font-medium text-gray-900">{{ task.task_template.title }}</div>
+                  <div class="text-sm font-medium text-gray-900">{{ task.task_template.name }}</div>
                   <div class="text-sm text-gray-500" *ngIf="task.task_template.description">{{ task.task_template.description }}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
@@ -117,7 +117,7 @@ import { TaskService, AssignedTask, TaskTemplate, Room, Performer, FrequencyConf
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                   <option value="">Sélectionner une tâche</option>
                   <option *ngFor="let template of taskService.taskTemplates()" [value]="template.id">
-                    {{ template.title || template.name || 'Titre manquant' }}
+                    {{ template.name || 'Titre manquant' }}
                   </option>
                 </select>
               </div>
@@ -186,15 +186,6 @@ import { TaskService, AssignedTask, TaskTemplate, Room, Performer, FrequencyConf
                         class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-400">
                   {{ isSubmitting() ? 'Traitement...' : (editingTask ? 'Modifier' : 'Assigner') }}
                 </button>
-                
-                <!-- Debug info - à supprimer plus tard -->
-                <div class="text-xs text-gray-500 mt-2">
-                  Debug: Formulaire valide = {{ assignForm.valid }} | Validation personnalisée = {{ isFormValid() }}
-                  <br>Erreurs: {{ getFormErrors() }}
-                  <br>Valeurs: task={{ assignForm.get('task_template_id')?.value }}, room={{ assignForm.get('room_id')?.value }}, performer={{ assignForm.get('default_performer_id')?.value }}
-                  <br>TaskTemplates count: {{ taskService.taskTemplates().length }}, Rooms count: {{ taskService.rooms().length }}
-                  <br>Première tâche: {{ taskService.taskTemplates()[0] | json }}
-                </div>
               </div>
             </form>
           </div>
@@ -333,15 +324,4 @@ export class AssignedTasksComponent implements OnInit {
     return !!(taskTemplate && room && timesPerDay && timesPerDay > 0);
   }
 
-  // Méthode de debug pour voir les erreurs de validation
-  getFormErrors(): string {
-    const errors: string[] = [];
-    Object.keys(this.assignForm.controls).forEach(key => {
-      const control = this.assignForm.get(key);
-      if (control && control.errors) {
-        errors.push(`${key}: ${JSON.stringify(control.errors)}`);
-      }
-    });
-    return errors.length > 0 ? errors.join(', ') : 'Aucune erreur';
-  }
 }

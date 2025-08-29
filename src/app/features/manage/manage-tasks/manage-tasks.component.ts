@@ -9,6 +9,7 @@ import {
 } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { TaskService, Performer } from '../../tasks/task.service';
+import { ConfirmationModalComponent, type ConfirmationConfig } from '../../../shared/components/confirmation-modal.component';
 
 /**
  * Interface pour les formulaires de création/édition
@@ -69,7 +70,7 @@ interface TemplateFilters {
 @Component({
   selector: 'app-manage-tasks',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ConfirmationModalComponent],
   template: `
     <div class="page-container">
       
@@ -285,7 +286,7 @@ interface TemplateFilters {
                             </button>
                             <button 
                               class="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-700 hover:bg-red-50 transition-colors"
-                              (click)="deleteTemplate(template.id)"
+                              (click)="openDeleteTemplateModal(template)"
                             >
                               <span class="text-lg">🗑️</span>
                               <span>Supprimer</span>
@@ -481,7 +482,7 @@ interface TemplateFilters {
                           </button>
                           <button 
                             class="btn btn-ghost btn-sm text-danger-600"
-                            (click)="deleteAssignment(assignment.id)"
+                            (click)="openDeleteAssignmentModal(assignment)"
                           >
                             🗑️
                           </button>
@@ -731,6 +732,23 @@ interface TemplateFilters {
         </div>
       </div>
     }
+
+    <!-- Modales de confirmation -->
+    <app-confirmation-modal
+      [isOpen]="deleteTemplateModal().isOpen"
+      [isLoading]="deleteTemplateModal().isLoading"
+      [config]="deleteTemplateConfig()"
+      (confirm)="confirmDeleteTemplate()"
+      (cancel)="closeDeleteTemplateModal()"
+    />
+
+    <app-confirmation-modal
+      [isOpen]="deleteAssignmentModal().isOpen"
+      [isLoading]="deleteAssignmentModal().isLoading"
+      [config]="deleteAssignmentConfig()"
+      (confirm)="confirmDeleteAssignment()"
+      (cancel)="closeDeleteAssignmentModal()"
+    />
   `,
   styles: [`
     :host {
@@ -811,6 +829,19 @@ export class ManageTasksComponent {
   readonly savingAssignment = signal(false);
   readonly togglingStatus = signal(new Set<string>());
   readonly searchQuery = signal('');
+
+  // Modales de confirmation
+  readonly deleteTemplateModal = signal<{
+    isOpen: boolean;
+    template: TaskTemplate | null;
+    isLoading: boolean;
+  }>({ isOpen: false, template: null, isLoading: false });
+
+  readonly deleteAssignmentModal = signal<{
+    isOpen: boolean;
+    assignment: AssignedTask | null;
+    isLoading: boolean;
+  }>({ isOpen: false, assignment: null, isLoading: false });
 
   // Filtres - correction avec interfaces dédiées
   readonly templateFilters = signal<TemplateFilters>({ category: '' });
@@ -921,6 +952,38 @@ export class ManageTasksComponent {
     return assignments.sort((a, b) => (a.room?.name || '').localeCompare(b.room?.name || ''));
   });
 
+  // Configuration des modales de confirmation
+  readonly deleteTemplateConfig = computed(() => {
+    const modal = this.deleteTemplateModal();
+    const template = modal.template;
+    const usageCount = template ? this.getTemplateUsageCount(template.id) : 0;
+    
+    return {
+      title: 'Supprimer le modèle de tâche',
+      message: `Êtes-vous sûr de vouloir supprimer le modèle "${template?.name || ''}" ?\n\nCette action est irréversible.${
+        usageCount > 0 ? ` ⚠️ Ce modèle est actuellement utilisé dans ${usageCount} assignation(s).` : ''
+      }`,
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler',
+      type: 'danger' as const,
+      icon: '🗑️'
+    };
+  });
+
+  readonly deleteAssignmentConfig = computed(() => {
+    const modal = this.deleteAssignmentModal();
+    const assignment = modal.assignment;
+    
+    return {
+      title: 'Supprimer l\'assignation',
+      message: `Êtes-vous sûr de vouloir supprimer l'assignation de la tâche "${assignment?.task_template?.name || ''}" dans la pièce "${assignment?.room?.name || ''}" ?\n\nCette action est irréversible.`,
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler',
+      type: 'danger' as const,
+      icon: '🗑️'
+    };
+  });
+
   /**
    * Gestion des onglets
    */
@@ -1025,8 +1088,10 @@ export class ManageTasksComponent {
       if (this.templateModal().mode === 'create') {
         await this.apiService.createTaskTemplate(templateData);
       } else {
-        // TODO: Implémenter la mise à jour
-        console.log('Update template:', templateData);
+        const templateId = this.templateModal().template?.id;
+        if (templateId) {
+          await this.apiService.updateTaskTemplate(templateId, templateData);
+        }
       }
 
       this.closeTemplateModal();
@@ -1053,18 +1118,41 @@ export class ManageTasksComponent {
     this.openMenuId.set(null);
   }
 
-  async deleteTemplate(templateId: string): Promise<void> {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce modèle ?')) return;
+  openDeleteTemplateModal(template: TaskTemplate): void {
+    const usageCount = this.getTemplateUsageCount(template.id);
+    
+    this.deleteTemplateModal.set({
+      isOpen: true,
+      template,
+      isLoading: false
+    });
+    this.openMenuId.set(null);
+  }
+
+  closeDeleteTemplateModal(): void {
+    this.deleteTemplateModal.set({
+      isOpen: false,
+      template: null,
+      isLoading: false
+    });
+  }
+
+  async confirmDeleteTemplate(): Promise<void> {
+    const modal = this.deleteTemplateModal();
+    if (!modal.template) return;
+
+    this.deleteTemplateModal.update(m => ({ ...m, isLoading: true }));
 
     try {
-      console.log('🗑️ Suppression du modèle de tâche:', templateId);
-      await this.apiService.deleteTaskTemplate(templateId);
+      console.log('🗑️ Suppression du modèle de tâche:', modal.template.id);
+      await this.apiService.deleteTaskTemplate(modal.template.id);
       console.log('✅ Modèle de tâche supprimé avec succès');
+      this.closeDeleteTemplateModal();
     } catch (error) {
       console.error('❌ Erreur lors de la suppression du modèle:', error);
+      this.deleteTemplateModal.update(m => ({ ...m, isLoading: false }));
       alert('Erreur lors de la suppression du modèle de tâche');
     }
-    this.openMenuId.set(null);
   }
 
   getTemplateUsageCount(templateId: string): number {
@@ -1177,14 +1265,37 @@ export class ManageTasksComponent {
     }
   }
 
-  async deleteAssignment(assignmentId: string): Promise<void> {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette assignation ?')) return;
+  openDeleteAssignmentModal(assignment: AssignedTask): void {
+    this.deleteAssignmentModal.set({
+      isOpen: true,
+      assignment,
+      isLoading: false
+    });
+  }
+
+  closeDeleteAssignmentModal(): void {
+    this.deleteAssignmentModal.set({
+      isOpen: false,
+      assignment: null,
+      isLoading: false
+    });
+  }
+
+  async confirmDeleteAssignment(): Promise<void> {
+    const modal = this.deleteAssignmentModal();
+    if (!modal.assignment) return;
+
+    this.deleteAssignmentModal.update(m => ({ ...m, isLoading: true }));
 
     try {
-      // TODO: Implémenter la suppression
-      console.log('Delete assignment:', assignmentId);
+      console.log('🗑️ Suppression de la tâche assignée:', modal.assignment.id);
+      await this.apiService.deleteAssignedTask(modal.assignment.id);
+      console.log('✅ Tâche assignée supprimée avec succès');
+      this.closeDeleteAssignmentModal();
     } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
+      console.error('❌ Erreur lors de la suppression de la tâche assignée:', error);
+      this.deleteAssignmentModal.update(m => ({ ...m, isLoading: false }));
+      alert('Erreur lors de la suppression de la tâche assignée');
     }
   }
 

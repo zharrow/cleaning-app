@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ApiService, type Room } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { ConfirmationModalComponent, type ConfirmationConfig } from '../../../shared/components/confirmation-modal.component';
 
 /**
  * Interface pour les formulaires
@@ -41,7 +42,7 @@ interface RoomStats {
 @Component({
   selector: 'app-manage-rooms',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ConfirmationModalComponent],
   template: `
     <div class="page-container">
       
@@ -212,7 +213,7 @@ interface RoomStats {
                           <div class="border-t my-1"></div>
                           <button 
                             class="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            (click)="deleteRoom(roomStat.id)"
+                            (click)="openDeleteRoomModalById(roomStat.id)"
                             [disabled]="roomStat.assignedTasksCount > 0"
                           >
                             <span class="text-lg">🗑️</span>
@@ -448,6 +449,15 @@ interface RoomStats {
         </div>
       </div>
     }
+
+    <!-- Modale de confirmation de suppression -->
+    <app-confirmation-modal
+      [isOpen]="deleteRoomModal().isOpen"
+      [isLoading]="deleteRoomModal().isLoading"
+      [config]="deleteRoomConfig()"
+      (confirm)="confirmDeleteRoom()"
+      (cancel)="closeDeleteRoomModal()"
+    />
   `,
   styles: [`
     :host {
@@ -541,6 +551,13 @@ export class ManageRoomsComponent {
     room: null
   });
 
+  // Modale de confirmation de suppression
+  readonly deleteRoomModal = signal<{
+    isOpen: boolean;
+    room: Room | null;
+    isLoading: boolean;
+  }>({ isOpen: false, room: null, isLoading: false });
+
   // Formulaire
   readonly roomForm = this.fb.nonNullable.group({
     name: ['', [Validators.required]],
@@ -586,6 +603,24 @@ export class ManageRoomsComponent {
         };
       })
       .sort((a, b) => this.getRoomOrder(a.id) - this.getRoomOrder(b.id));
+  });
+
+  // Configuration de la modale de suppression
+  readonly deleteRoomConfig = computed(() => {
+    const modal = this.deleteRoomModal();
+    const room = modal.room;
+    const taskCount = room ? this.getRoomAssignedTasksCount(room.id) : 0;
+    
+    return {
+      title: 'Supprimer la pièce',
+      message: `Êtes-vous sûr de vouloir supprimer la pièce "${room?.name || ''}" ?\n\nCette action est irréversible.${
+        taskCount > 0 ? `\n\n⚠️ Cette pièce a ${taskCount} tâche(s) assignée(s). Supprimez-les d'abord.` : ''
+      }`,
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler',
+      type: 'danger' as const,
+      icon: '🗑️'
+    };
   });
 
   // Suggestions de pièces
@@ -715,24 +750,57 @@ export class ManageRoomsComponent {
     this.openMenuId.set(null);
   }
 
-  async deleteRoom(roomId: string): Promise<void> {
-    const room = this.rooms().find(r => r.id === roomId);
-    if (!room) return;
+  openDeleteRoomModal(room: Room): void {
+    this.deleteRoomModal.set({
+      isOpen: true,
+      room,
+      isLoading: false
+    });
+    this.openMenuId.set(null);
+  }
 
-    const assignedTasksCount = this.assignedTasks().filter(t => t.room_id === roomId).length;
+  openDeleteRoomModalById(roomId: string): void {
+    const room = this.rooms().find(r => r.id === roomId);
+    if (room) {
+      this.openDeleteRoomModal(room);
+    }
+  }
+
+  closeDeleteRoomModal(): void {
+    this.deleteRoomModal.set({
+      isOpen: false,
+      room: null,
+      isLoading: false
+    });
+  }
+
+  async confirmDeleteRoom(): Promise<void> {
+    const modal = this.deleteRoomModal();
+    if (!modal.room) return;
+
+    const assignedTasksCount = this.assignedTasks().filter(t => t.room_id === modal.room!.id).length;
     if (assignedTasksCount > 0) {
       alert('Impossible de supprimer cette pièce car elle a des tâches assignées. Supprimez d\'abord les tâches.');
+      this.closeDeleteRoomModal();
       return;
     }
 
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer la pièce "${room.name}" ?`)) return;
+    this.deleteRoomModal.update(m => ({ ...m, isLoading: true }));
 
     try {
-      await this.apiService.deleteRoom(roomId);
+      console.log('🗑️ Suppression de la pièce:', modal.room.id);
+      await this.apiService.deleteRoom(modal.room.id);
+      console.log('✅ Pièce supprimée avec succès');
+      this.closeDeleteRoomModal();
     } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
+      console.error('❌ Erreur lors de la suppression de la pièce:', error);
+      this.deleteRoomModal.update(m => ({ ...m, isLoading: false }));
+      alert('Erreur lors de la suppression de la pièce');
     }
-    this.openMenuId.set(null);
+  }
+
+  getRoomAssignedTasksCount(roomId: string): number {
+    return this.assignedTasks().filter(t => t.room_id === roomId).length;
   }
 
   viewRoomTasks(roomId: string): void {
