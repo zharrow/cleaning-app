@@ -693,6 +693,66 @@
 .pointer-events-auto { pointer-events: auto; }
 
 /* ===================
+   Gradients
+   =================== */
+
+.bg-gradient-dark {
+  background: linear-gradient(135deg, var(--color-gray-900) 0%, var(--color-gray-800) 50%, var(--color-gray-900) 100%);
+}
+
+.bg-gradient-primary {
+  background: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-700) 100%);
+}
+
+.text-gradient-primary {
+  background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-700) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.text-gradient-accent {
+  background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* ===================
+   Glass Morphism
+   =================== */
+
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ===================
+   Animation orbs
+   =================== */
+
+.orb {
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.6;
+}
+
+.orb-primary {
+  background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+}
+
+.orb-secondary {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+}
+
+/* ===================
    Responsive helpers
    =================== */
 
@@ -703,6 +763,8 @@
   .sm\:grid { display: grid; }
   .sm\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sm\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sm\:text-left { text-align: left; }
+  .sm\:text-center { text-align: center; }
 }
 
 @media (min-width: 768px) {
@@ -723,4 +785,7 @@
   .lg\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .lg\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .lg\:grid-cols-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .lg\:text-left { text-align: left; }
+  .lg\:px-12 { padding-left: var(--spacing-12); padding-right: var(--spacing-12); }
+  .lg\:px-16 { padding-left: var(--spacing-16); padding-right: var(--spacing-16); }
 }
