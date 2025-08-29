@@ -109,6 +109,18 @@ export interface DashboardStats {
 }
 
 /**
+ * Interface pour les statuts temporaires des tâches de session
+ */
+export interface TodayTaskStatus {
+  status: 'todo' | 'in_progress' | 'done' | 'partial' | 'skipped' | 'blocked';
+  performed_by?: string;
+  notes?: string;
+  photos?: string[];
+  started_at?: string;
+  completed_at?: string;
+}
+
+/**
  * Service API moderne utilisant httpResource() et signals
  * Gère tous les appels vers l'API backend avec authentification automatique
  */
@@ -119,6 +131,9 @@ export class ApiService {
   
   // Signal pour forcer le refresh des ressources
   private readonly refreshTrigger = signal(0);
+  
+  // Signal pour les statuts temporaires des tâches de la session du jour
+  private readonly todayTaskStatuses = signal<Map<string, TodayTaskStatus>>(new Map());
   
   // Configuration de base
   private readonly baseUrl = environment.apiUrl;
@@ -267,10 +282,37 @@ export class ApiService {
   );
   
   readonly todayProgress = computed(() => {
-    const logs = this.todayLogs.value() || [];
-    const completed = logs.filter(log => log.status === 'done').length;
-    const total = logs.length;
+    const todayTasks = this.todaySessionTasks();
+    const completed = todayTasks.filter(task => task.status === 'done').length;
+    const total = todayTasks.length;
     return { completed, total, percentage: total > 0 ? (completed / total) * 100 : 0 };
+  });
+
+  // Computed pour les tâches de session avec statuts temporaires
+  readonly todaySessionTasks = computed(() => {
+    const assignedTasks = this.assignedTasks.value() || [];
+    const session = this.todaySession.value();
+    const statuses = this.todayTaskStatuses();
+    
+    // Si pas de session, retourner un tableau vide
+    if (!session) return [];
+    
+    // Transformer les AssignedTask en SessionTask avec statuts temporaires
+    return assignedTasks.map(assignedTask => {
+      const taskId = assignedTask.id;
+      const temporaryStatus = statuses.get(taskId);
+      
+      return {
+        id: taskId,
+        assignedTask,
+        status: temporaryStatus?.status || 'todo',
+        performed_by: temporaryStatus?.performed_by || assignedTask.default_performer?.name,
+        notes: temporaryStatus?.notes,
+        photos: temporaryStatus?.photos,
+        started_at: temporaryStatus?.started_at,
+        completed_at: temporaryStatus?.completed_at
+      };
+    });
   });
   
   /**
@@ -588,6 +630,45 @@ export class ApiService {
    */
   refreshData(): void {
     this.refreshTrigger.update(n => n + 1);
+  }
+
+  /**
+   * Refresh silencieux pour le background (sans loading indicators)
+   */
+  refreshDataSilently(): void {
+    // Reloader seulement les resources qui peuvent changer
+    this.assignedTasks.reload();
+    // La session today ne change pas souvent, pas besoin de la recharger
+    // this.todaySession.reload();
+  }
+
+  /**
+   * Gestion des statuts temporaires de tâches
+   */
+  getTodayTaskStatus(taskId: string): TodayTaskStatus | undefined {
+    return this.todayTaskStatuses().get(taskId);
+  }
+
+  updateTodayTaskStatus(taskId: string, status: Partial<TodayTaskStatus>): void {
+    const currentStatuses = this.todayTaskStatuses();
+    const updatedStatuses = new Map(currentStatuses);
+    const existingStatus = updatedStatuses.get(taskId) || { status: 'todo' };
+    
+    updatedStatuses.set(taskId, {
+      ...existingStatus,
+      ...status,
+      // Automatiquement mettre à jour les timestamps
+      completed_at: status.status === 'done' ? new Date().toISOString() : status.completed_at,
+      started_at: status.status === 'in_progress' && !existingStatus.started_at ? new Date().toISOString() : existingStatus.started_at
+    });
+    
+    this.todayTaskStatuses.set(updatedStatuses);
+    console.log('✅ Statut de tâche mis à jour:', { taskId, status: updatedStatuses.get(taskId) });
+  }
+
+  clearTodayTaskStatuses(): void {
+    this.todayTaskStatuses.set(new Map());
+    console.log('🔄 Statuts temporaires réinitialisés');
   }
   
   /**

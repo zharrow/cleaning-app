@@ -2,7 +2,7 @@ import { Component, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { ApiService, type CleaningLog, type CleaningSession, type AssignedTask } from '../../../core/services/api.service';
+import { ApiService, type CleaningLog, type CleaningSession, type AssignedTask, type TodayTaskStatus } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
 
 /**
@@ -485,6 +485,27 @@ interface TaskValidationModal {
                       <p class="text-sm text-gray-600 mb-3">
                         {{ taskModal().photos.length }} photo(s) sélectionnée(s)
                       </p>
+                      
+                      <!-- Liste des photos sélectionnées -->
+                      <div class="mb-3 space-y-2">
+                        @for (photo of taskModal().photos; track photo.name + photo.size) {
+                          <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <div class="flex items-center gap-2">
+                              <span class="text-sm">📷</span>
+                              <span class="text-sm text-gray-700 truncate">{{ photo.name }}</span>
+                              <span class="text-xs text-gray-500">({{ (photo.size / 1024).toFixed(1) }}KB)</span>
+                            </div>
+                            <button 
+                              type="button" 
+                              class="text-red-500 hover:text-red-700 text-sm"
+                              (click)="removePhoto($index)"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        }
+                      </div>
+                      
                       <button 
                         type="button"
                         class="btn btn-secondary"
@@ -702,35 +723,10 @@ export class SessionTodayComponent {
 
   // Computed signals depuis l'API
   readonly currentSession = computed(() => this.apiService.todaySession.value());
-  readonly assignedTasks = computed(() => this.apiService.assignedTasks.value() || []);
+  readonly allTasks = computed(() => this.apiService.todaySessionTasks());
   readonly isLoading = computed(() => 
     this.apiService.todaySession.isLoading() || this.apiService.assignedTasks.isLoading()
   );
-
-  // Signal pour stocker les statuts temporaires des tâches de la session
-  private readonly taskStatuses = signal<Map<string, Partial<SessionTask>>>(new Map());
-
-  // Transformer les AssignedTask en SessionTask avec statuts temporaires
-  readonly allTasks = computed((): SessionTask[] => {
-    const assigned = this.assignedTasks();
-    const statuses = this.taskStatuses();
-    
-    return assigned.map(assignedTask => {
-      const taskId = assignedTask.id;
-      const temporaryStatus = statuses.get(taskId) || {};
-      
-      return {
-        id: taskId,
-        assignedTask,
-        status: temporaryStatus.status || 'todo',
-        performed_by: temporaryStatus.performed_by || assignedTask.default_performer?.name,
-        notes: temporaryStatus.notes,
-        photos: temporaryStatus.photos,
-        started_at: temporaryStatus.started_at,
-        completed_at: temporaryStatus.completed_at
-      } as SessionTask;
-    });
-  });
 
   // Progress calculations
   readonly globalProgress = computed(() => {
@@ -798,17 +794,62 @@ export class SessionTodayComponent {
     return this.allTasks().filter(task => ['todo', 'in_progress'].includes(task.status)).length;
   });
 
+  // Signal pour contrôler le refresh automatique
+  private readonly backgroundRefreshEnabled = signal(true);
+
   constructor() {
-    // Effect pour rafraîchir automatiquement
+    // Effect pour rafraîchir automatiquement en arrière-plan
     effect(() => {
-      if (this.currentSession()) {
-        const interval = setInterval(() => {
-          this.apiService.refreshData();
-        }, 15000); // Refresh toutes les 15 secondes
+      if (this.currentSession() && this.backgroundRefreshEnabled()) {
+        const interval = setInterval(async () => {
+          // Refresh en arrière-plan seulement si la page est visible
+          if (!document.hidden) {
+            await this.refreshDataSilently();
+          }
+        }, 60000); // Refresh toutes les 60 secondes (moins fréquent)
 
         return () => clearInterval(interval);
       }
       return; // Retourner undefined quand pas de session
+    });
+
+    // Arrêter le refresh auto quand l'utilisateur interagit
+    this.pauseAutoRefreshOnUserActivity();
+  }
+
+  /**
+   * Refresh silencieux des données sans indicateurs de loading
+   */
+  private async refreshDataSilently(): Promise<void> {
+    try {
+      // Utiliser la méthode silencieuse de l'ApiService
+      this.apiService.refreshDataSilently();
+      console.log('🔄 Refresh silencieux des données effectué');
+    } catch (error) {
+      console.error('❌ Erreur lors du refresh silencieux:', error);
+    }
+  }
+
+  /**
+   * Pause le refresh automatique pendant l'activité utilisateur
+   */
+  private pauseAutoRefreshOnUserActivity(): void {
+    let activityTimeout: number;
+    
+    const resetActivityTimer = () => {
+      this.backgroundRefreshEnabled.set(false);
+      clearTimeout(activityTimeout);
+      
+      // Reprendre le refresh après 2 minutes d'inactivité
+      activityTimeout = window.setTimeout(() => {
+        this.backgroundRefreshEnabled.set(true);
+        console.log('🔄 Refresh automatique réactivé après inactivité');
+      }, 120000); // 2 minutes
+    };
+
+    // Écouter les événements d'activité utilisateur
+    ['click', 'keypress', 'scroll', 'mousemove'].forEach(event => {
+      document.addEventListener(event, resetActivityTimer, { passive: true });
     });
   }
 
@@ -907,34 +948,46 @@ export class SessionTodayComponent {
 
     this.savingTask.set(true);
     try {
+      console.log('📤 Début sauvegarde tâche:', modal.task.id);
+      console.log('📸 Photos à uploader:', modal.photos.length);
+      
       // Upload des photos d'abord
       const photoUrls: string[] = [];
-      for (const photo of modal.photos) {
-        const url = await this.apiService.uploadPhoto(photo);
-        photoUrls.push(url);
+      if (modal.photos.length > 0) {
+        console.log('🔄 Upload des photos en cours...');
+        for (let i = 0; i < modal.photos.length; i++) {
+          const photo = modal.photos[i];
+          console.log(`📷 Upload photo ${i + 1}/${modal.photos.length}:`, photo.name);
+          try {
+            const url = await this.apiService.uploadPhoto(photo);
+            photoUrls.push(url);
+            console.log(`✅ Photo ${i + 1} uploadée:`, url);
+          } catch (photoError) {
+            console.error(`❌ Erreur upload photo ${i + 1}:`, photoError);
+            // Continuer même si une photo échoue
+          }
+        }
+        console.log(`🎯 ${photoUrls.length}/${modal.photos.length} photos uploadées avec succès`);
       }
 
-      // Mettre à jour le statut temporaire dans taskStatuses
+      // Mettre à jour le statut temporaire via l'API service
       const taskId = modal.task.id;
-      const currentStatuses = this.taskStatuses();
-      const updatedStatuses = new Map(currentStatuses);
-      
-      updatedStatuses.set(taskId, {
+      const updateData = {
         status: modal.status,
         performed_by: modal.performer || undefined,
         notes: modal.notes || undefined,
-        photos: photoUrls.length > 0 ? photoUrls : undefined,
-        completed_at: modal.status === 'done' ? new Date().toISOString() : undefined,
-        started_at: modal.status === 'in_progress' && !modal.task.started_at ? new Date().toISOString() : modal.task.started_at
-      });
+        photos: photoUrls.length > 0 ? photoUrls : undefined
+      };
       
-      this.taskStatuses.set(updatedStatuses);
-      
-      console.log('✅ Statut de tâche mis à jour localement:', { taskId, status: modal.status });
+      console.log('💾 Mise à jour statut tâche:', updateData);
+      this.apiService.updateTodayTaskStatus(taskId, updateData);
 
+      console.log('✅ Sauvegarde terminée avec succès');
       this.closeTaskModal();
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
+      console.error('❌ Erreur lors de la sauvegarde:', error);
+      // Afficher l'erreur à l'utilisateur
+      alert(`Erreur lors de la sauvegarde: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     } finally {
       this.savingTask.set(false);
     }
@@ -942,13 +995,39 @@ export class SessionTodayComponent {
 
   onPhotosSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
+    console.log('📁 Sélection de fichiers détectée');
+    console.log('📎 Files:', input.files);
+    
     if (input.files) {
       const newPhotos = Array.from(input.files);
-      this.taskModal.update(modal => ({
-        ...modal,
-        photos: [...modal.photos, ...newPhotos]
-      }));
+      console.log('📸 Nouvelles photos sélectionnées:', newPhotos.length);
+      newPhotos.forEach((photo, index) => {
+        console.log(`  ${index + 1}. ${photo.name} (${photo.size} bytes, ${photo.type})`);
+      });
+      
+      this.taskModal.update(modal => {
+        const updatedPhotos = [...modal.photos, ...newPhotos];
+        console.log('📋 Total photos dans modal:', updatedPhotos.length);
+        return {
+          ...modal,
+          photos: updatedPhotos
+        };
+      });
+    } else {
+      console.log('❌ Aucun fichier sélectionné');
     }
+  }
+
+  removePhoto(index: number): void {
+    console.log('🗑️ Suppression photo à l\'index:', index);
+    this.taskModal.update(modal => {
+      const updatedPhotos = modal.photos.filter((_, i) => i !== index);
+      console.log('📋 Photos restantes:', updatedPhotos.length);
+      return {
+        ...modal,
+        photos: updatedPhotos
+      };
+    });
   }
 
   /**

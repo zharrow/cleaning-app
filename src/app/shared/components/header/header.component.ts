@@ -32,22 +32,10 @@ interface ProgressStats {
       
       <!-- Ligne principale du header -->
       <div class="header-top">
-        <!-- Branding et navigation contextuelle -->
-        <div class="header-brand">
-          <div class="logo-container">
-            <div class="logo-icon">
-              <svg viewBox="0 0 24 24" fill="none" class="w-8 h-8">
-                <path d="M3 12h18m-9-9v18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/>
-              </svg>
-            </div>
-            <div class="brand-text">
-              <h1 class="brand-name">CleanTrack</h1>
-              <span class="brand-tagline">Tableau de bord</span>
-            </div>
-          </div>
-        </div>
-
+        
+        <!-- Espace équilibrant (invisible mais même largeur que les actions) -->
+        <div class="header-spacer"></div>
+        
         <!-- Zone centrale: Status et progression condensée -->
         <div class="header-center">
           <div class="status-overview">
@@ -160,33 +148,6 @@ interface ProgressStats {
         </div>
       </div>
 
-      <!-- Barre de progression moderne et discrète -->
-      @if (showDetailedProgress()) {
-        <div class="progress-bar-container">
-          <div class="progress-track">
-            <div class="progress-segments">
-              <!-- Segments colorés par statut -->
-              <div class="progress-segment completed" 
-                   [style.width.%]="getSegmentWidth('completed')"></div>
-              <div class="progress-segment in-progress" 
-                   [style.width.%]="getSegmentWidth('inProgress')"></div>
-              <div class="progress-segment blocked" 
-                   [style.width.%]="getSegmentWidth('blocked')"></div>
-            </div>
-            
-            <!-- Indicateur de position actuelle -->
-            <div class="progress-pointer" 
-                 [style.left.%]="progressStats().percentage"></div>
-          </div>
-          
-          <!-- Labels contextuels -->
-          <div class="progress-labels">
-            <span class="label-start">Début</span>
-            <span class="label-current">{{ progressStats().percentage }}% terminé</span>
-            <span class="label-end">Objectif</span>
-          </div>
-        </div>
-      }
     </header>
   `,
   styles: [`
@@ -208,58 +169,17 @@ interface ProgressStats {
        ======================= */
     .header-top {
       display: grid;
-      grid-template-columns: auto 1fr auto;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      padding: 1rem 2rem;
-      gap: 2rem;
+      padding: 0.75rem 2rem;
       max-width: 1400px;
       margin: 0 auto;
     }
 
-    /* =======================
-       BRANDING 
-       ======================= */
-    .header-brand {
-      display: flex;
-      align-items: center;
+    .header-spacer {
+      /* Espace équilibrant pour centrer parfaitement */
     }
 
-    .logo-container {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .logo-icon {
-      width: 48px;
-      height: 48px;
-      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-    }
-
-    .brand-text {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .brand-name {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #1e293b;
-      margin: 0;
-      line-height: 1.2;
-    }
-
-    .brand-tagline {
-      font-size: 0.875rem;
-      color: #64748b;
-      font-weight: 500;
-    }
 
     /* =======================
        ZONE CENTRALE - STATUS 
@@ -272,10 +192,10 @@ interface ProgressStats {
     .status-overview {
       display: flex;
       align-items: center;
-      gap: 3rem;
-      padding: 1rem 2rem;
+      gap: 2rem;
+      padding: 0.75rem 1.5rem;
       background: rgba(255, 255, 255, 0.6);
-      border-radius: 16px;
+      border-radius: 12px;
       border: 1px solid rgba(0, 0, 0, 0.05);
       backdrop-filter: blur(10px);
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
@@ -292,8 +212,8 @@ interface ProgressStats {
 
     .progress-circle {
       position: relative;
-      width: 64px;
-      height: 64px;
+      width: 48px;
+      height: 48px;
     }
 
     .progress-ring {
@@ -325,7 +245,7 @@ interface ProgressStats {
     }
 
     .progress-percentage {
-      font-size: 1.125rem;
+      font-size: 1rem;
       font-weight: 700;
       color: #1e293b;
       line-height: 1;
@@ -417,6 +337,7 @@ interface ProgressStats {
     .header-actions {
       display: flex;
       align-items: center;
+      justify-content: flex-end;
       gap: 1rem;
     }
 
@@ -696,27 +617,48 @@ interface ProgressStats {
 export class HeaderComponent {
   // Services injectés
   readonly authService = inject(AuthService);
+  readonly apiService = inject(ApiService);
   
   // Signaux d'état
   readonly refreshing = signal(false);
   readonly actionMenuOpen = signal(false);
-  readonly showDetailedProgress = signal(true);
   
-  // Mock data pour la progression (à remplacer par les vraies données)
-  private readonly mockProgressData = signal<ProgressStats>({
-    todo: 0,
-    inProgress: 0,
-    completed: 0,
-    blocked: 0,
-    total: 0,
-    percentage: 0
+  // Computed signals avec vraies données
+  readonly progressStats = computed((): ProgressStats => {
+    const todayTasks = this.apiService.todaySessionTasks();
+    
+    // Si pas de tâches, retourner des stats vides
+    if (todayTasks.length === 0) {
+      return {
+        todo: 0,
+        inProgress: 0,
+        completed: 0,
+        blocked: 0,
+        total: 0,
+        percentage: 0
+      };
+    }
+
+    // Calculer les stats basées sur les vrais statuts temporaires
+    const todo = todayTasks.filter(task => task.status === 'todo').length;
+    const inProgress = todayTasks.filter(task => task.status === 'in_progress').length;
+    const completed = todayTasks.filter(task => task.status === 'done').length;
+    const blocked = todayTasks.filter(task => ['blocked', 'skipped'].includes(task.status)).length;
+    const total = todayTasks.length;
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    return {
+      todo,
+      inProgress,
+      completed,
+      blocked,
+      total,
+      percentage
+    };
   });
   
-  // Computed signals
-  readonly progressStats = computed(() => this.mockProgressData());
-  
   readonly syncInProgress = computed(() => {
-    return this.authService.isLoading();
+    return this.apiService.isLoading() || this.authService.isLoading();
   });
 
   // Computed pour la progression circulaire
@@ -729,26 +671,7 @@ export class HeaderComponent {
   
   
   constructor() {
-    // Simuler des données de progression (à remplacer par un service)
-    this.loadProgressData();
-  }
-  
-  /**
-   * Charger les données de progression
-   * À remplacer par un appel au service API
-   */
-  private loadProgressData(): void {
-    // Simulation de données pour démontrer les effets visuels
-    setTimeout(() => {
-      this.mockProgressData.set({
-        todo: 3,
-        inProgress: 2,
-        completed: 8,
-        blocked: 1,
-        total: 14,
-        percentage: 65
-      });
-    }, 100);
+    // Les données sont maintenant chargées automatiquement via les computed signals
   }
   
   /**
@@ -759,8 +682,8 @@ export class HeaderComponent {
     
     this.refreshing.set(true);
     try {
-      // Recharger les données de progression
-      this.loadProgressData();
+      // Rafraîchir les données API
+      this.apiService.refreshData();
       await new Promise(resolve => setTimeout(resolve, 800));
     } catch (error) {
       console.error('Erreur lors du refresh:', error);
