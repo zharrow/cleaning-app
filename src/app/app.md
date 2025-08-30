@@ -29,7 +29,7 @@ CleanTrack est une application moderne de gestion des tâches de nettoyage perme
 **Frontend** : Angular 19 + Signals + Standalone Components  
 **Backend** : FastAPI + SQLAlchemy + PostgreSQL  
 **Auth** : Firebase Authentication  
-**UI** : TailwindCSS + Composants personnalisés
+**UI** : Variables et Composants personnalisés inspiré de Tailwind
 
 ---
 
@@ -140,7 +140,7 @@ CleanTrack est une application moderne de gestion des tâches de nettoyage perme
 - ✅ Services centralisés (ApiService, AuthService)
 - ✅ Intercepteurs pour gestion automatique
 - ✅ TypeScript strict avec interfaces complètes
-- ✅ TailwindCSS pour styling
+- ✅ Variables, Animation CSS personnalisé pour styling (inspiré de Tailwind)
 - ✅ Environnements de configuration
 
 ---

@@ -104,10 +104,11 @@ interface PerformerModal {
         </div>
       } @else if (taskService.performers().length > 0) {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          @for (performer of taskService.performers(); track performer.id) {
+          @for (performer of sortedPerformers(); track performer.id) {
             <div 
               class="card hover-lift animate-fade-in"
               [class.overflow-visible]="openMenuId() === performer.id"
+              [class.card-inactive]="!performer.is_active"
             >
               <div class="card-body">
                 <div class="flex items-start justify-between mb-4">
@@ -356,6 +357,23 @@ interface PerformerModal {
     .grid {
       overflow: visible;
     }
+
+    /* Style pour les performers inactifs */
+    .card-inactive {
+      opacity: 0.6;
+      background-color: #f8f9fa;
+      border-color: #dee2e6;
+      transform: none !important;
+    }
+
+    .card-inactive:hover {
+      transform: none !important;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .card-inactive .text-gray-900 {
+      color: #6c757d !important;
+    }
   `]
 })
 /**
@@ -402,6 +420,17 @@ export class ManagePerformersComponent implements OnInit {
   
   readonly inactivePerformersCount = computed(() => 
     this.taskService.performers().filter(p => !p.is_active).length
+  );
+
+  // Performers triés : actifs d'abord, inactifs à la fin
+  readonly sortedPerformers = computed(() => 
+    this.taskService.performers().sort((a, b) => {
+      // Actifs en premier (is_active === true)
+      if (a.is_active && !b.is_active) return -1;
+      if (!a.is_active && b.is_active) return 1;
+      // Même statut : tri par nom
+      return a.name.localeCompare(b.name);
+    })
   );
 
   // Configuration des modales de confirmation
@@ -573,14 +602,11 @@ export class ManagePerformersComponent implements OnInit {
     this.deactivatePerformerModal.update(m => ({ ...m, isLoading: true }));
 
     try {
-      const newStatus = !modal.performer.is_active;
-      console.log(`🔄 ${newStatus ? 'Activation' : 'Désactivation'} de l'intervenant:`, modal.performer.id);
+      console.log(`🔄 Toggle du statut de l'intervenant:`, modal.performer.id);
       
-      await this.taskService.updatePerformer(modal.performer.id, {
-        is_active: newStatus
-      });
+      await this.taskService.togglePerformerStatus(modal.performer.id);
       
-      console.log(`✅ Intervenant ${newStatus ? 'activé' : 'désactivé'} avec succès`);
+      console.log(`✅ Statut de l'intervenant mis à jour avec succès`);
       this.closeDeactivatePerformerModal();
     } catch (error) {
       console.error('❌ Erreur lors de la modification du statut:', error);

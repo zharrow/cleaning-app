@@ -93,6 +93,17 @@ export interface CleaningLog {
   readonly updated_at: string;
 }
 
+export interface Performer {
+  readonly id: string;
+  readonly name: string;
+  readonly is_active: boolean;
+  readonly created_at: string;
+  readonly created_by?: {
+    readonly id: string;
+    readonly name: string;
+  };
+}
+
 export interface DashboardStats {
   readonly todayProgress: {
     readonly total: number;
@@ -465,11 +476,24 @@ export class ApiService {
   /**
    * Récupère tous les performers
    */
-  async getPerformers(): Promise<any[]> {
+  async getPerformers(includeInactive: boolean = false): Promise<Performer[]> {
     const token = await this.authService.getToken();
     if (!token) throw new Error('Non authentifié');
     
-    return this.httpGet<any[]>('/performers', {
+    const url = includeInactive ? '/performers?include_inactive=true' : '/performers';
+    return this.httpGet<Performer[]>(url, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  }
+
+  /**
+   * Récupère un performer spécifique
+   */
+  async getPerformer(id: string): Promise<Performer> {
+    const token = await this.authService.getToken();
+    if (!token) throw new Error('Non authentifié');
+    
+    return this.httpGet<Performer>(`/performers/${id}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
   }
@@ -477,11 +501,11 @@ export class ApiService {
   /**
    * Crée un nouveau performer
    */
-  async createPerformer(performer: { name: string; is_active?: boolean }): Promise<any> {
+  async createPerformer(performer: { name: string }): Promise<Performer> {
     const token = await this.authService.getToken();
     if (!token) throw new Error('Non authentifié');
     
-    return this.httpPost<any>('/performers', performer, {
+    return this.httpPost<Performer>('/performers', performer, {
       headers: { Authorization: `Bearer ${token}` }
     });
   }
@@ -489,11 +513,35 @@ export class ApiService {
   /**
    * Met à jour un performer
    */
-  async updatePerformer(id: string, updates: any): Promise<any> {
+  async updatePerformer(id: string, updates: { name: string }): Promise<Performer> {
     const token = await this.authService.getToken();
     if (!token) throw new Error('Non authentifié');
     
-    return this.httpPut<any>(`/performers/${id}`, updates, {
+    return this.httpPut<Performer>(`/performers/${id}`, updates, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  }
+
+  /**
+   * Active/désactive un performer
+   */
+  async togglePerformerStatus(id: string): Promise<Performer> {
+    const token = await this.authService.getToken();
+    if (!token) throw new Error('Non authentifié');
+    
+    return this.httpPatch<Performer>(`/performers/${id}/toggle`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  }
+
+  /**
+   * Supprime un performer (soft delete)
+   */
+  async deletePerformer(id: string): Promise<{ message: string }> {
+    const token = await this.authService.getToken();
+    if (!token) throw new Error('Non authentifié');
+    
+    return this.httpDelete<{ message: string }>(`/performers/${id}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
   }
@@ -793,10 +841,10 @@ export class ApiService {
     }
   }
   
-  private async httpDelete(
+  private async httpDelete<T = any>(
     endpoint: string, 
     options: { headers?: HttpHeaders | { [header: string]: string } } = {}
-  ): Promise<void> {
+  ): Promise<T> {
     try {
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         method: 'DELETE',
@@ -809,6 +857,9 @@ export class ApiService {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
+      
+      const data = await response.json();
+      return data;
     } catch (error) {
       console.error(`DELETE ${endpoint} failed:`, error);
       throw error;
