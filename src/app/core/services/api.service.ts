@@ -714,9 +714,125 @@ export class ApiService {
     console.log('✅ Statut de tâche mis à jour:', { taskId, status: updatedStatuses.get(taskId) });
   }
 
+  // ===================
+  // Sessions et CleaningLogs
+  // ===================
+
+  /**
+   * Finalise une session en convertissant les statuts temporaires en CleaningLogs
+   */
+  async finalizeSession(sessionId: string): Promise<{ message: string; logs_updated: number }> {
+    const token = await this.authService.getToken();
+    if (!token) throw new Error('Non authentifié');
+
+    // 1. Récupérer tous les statuts temporaires
+    const temporaryStatuses = this.todayTaskStatuses();
+    
+    // 2. Convertir le Map en array pour l'API
+    const taskStatuses = Array.from(temporaryStatuses.entries()).map(([taskId, status]) => ({
+      task_id: taskId,
+      status: status
+    }));
+
+    // 3. Appeler l'endpoint de finalisation
+    const result = await this.httpPost<{ message: string; logs_updated: number }>(
+      `/sessions/${sessionId}/finalize`,
+      { task_statuses: taskStatuses },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    return result;
+  }
+
+  /**
+   * Marque une session comme complétée
+   */
+  async completeSession(sessionId: string): Promise<{ message: string; status: string }> {
+    const token = await this.authService.getToken();
+    if (!token) throw new Error('Non authentifié');
+
+    const result = await this.httpPut<{ message: string; status: string }>(
+      `/sessions/${sessionId}/complete`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    return result;
+  }
+
+  /**
+   * Finalise et complète une session (workflow complet)
+   */
+  async finalizeAndCompleteSession(sessionId: string): Promise<void> {
+    // 1. Finaliser la session (convertir statuts temporaires → CleaningLogs)
+    await this.finalizeSession(sessionId);
+    
+    // 2. Marquer comme complétée
+    await this.completeSession(sessionId);
+    
+    // 3. Nettoyer les statuts temporaires
+    this.clearTodayTaskStatuses();
+    
+    // 4. Refresh les données
+    this.refreshData();
+  }
+
+  /**
+   * Vérifie si une session peut être finalisée (toutes les tâches sont terminées)
+   */
+  canFinalizeSession(): boolean {
+    const statuses = this.todayTaskStatuses();
+    if (statuses.size === 0) return false;
+
+    // Vérifier que toutes les tâches sont soit 'done', 'partial', 'skipped' ou 'blocked'
+    // (pas de 'todo' ou 'in_progress')
+    return Array.from(statuses.values()).every(status => 
+      ['done', 'partial', 'skipped', 'blocked'].includes(status.status)
+    );
+  }
+
   clearTodayTaskStatuses(): void {
     this.todayTaskStatuses.set(new Map());
     console.log('🔄 Statuts temporaires réinitialisés');
+  }
+
+  /**
+   * Récupère le token d'authentification (méthode helper)
+   */
+  async getAuthToken(): Promise<string> {
+    const token = await this.authService.getToken();
+    if (!token) throw new Error('Non authentifié');
+    return token;
+  }
+
+  /**
+   * Exporte une session en PDF
+   */
+  async exportSessionToPdf(sessionId: string): Promise<void> {
+    const token = await this.getAuthToken();
+    
+    const response = await fetch(`${environment.apiUrl}/exports/pdf/${sessionId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.statusText}`);
+    }
+
+    // Télécharger le fichier
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `session-${sessionId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
   }
   
   /**

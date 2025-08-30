@@ -49,7 +49,7 @@ interface RecentActivity {
       @if (isLoading()) {
         <div class="flex items-center justify-center min-h-screen">
           <div class="flex flex-col items-center gap-4">
-            <div class="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+            <div class="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded animate-spin"></div>
             <p class="text-gray-600">Chargement du tableau de bord...</p>
             @if (loadingDetails()) {
               <p class="text-sm text-gray-500">{{ loadingDetails() }}</p>
@@ -72,11 +72,11 @@ interface RecentActivity {
               
               <!-- État utilisateur -->
               <div class="flex justify-center items-center gap-4">
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                <span class="inline-flex items-center px-3 py-1 rounded text-sm font-medium bg-green-100 text-green-800">
                   ✅ Connecté
                 </span>
                 @if (userRole()) {
-                  <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                  <span class="inline-flex items-center px-3 py-1 rounded text-sm font-medium bg-blue-100 text-blue-800">
                     {{ getRoleLabel() }}
                   </span>
                 }
@@ -142,7 +142,7 @@ interface RecentActivity {
                       <p class="text-sm font-medium text-gray-900">{{ activity.title }}</p>
                       <p class="text-xs text-gray-500">{{ activity.timestamp }}</p>
                     </div>
-                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium"
                           [class]="activity.statusClass">
                       {{ activity.status }}
                     </span>

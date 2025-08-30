@@ -238,9 +238,9 @@ interface RoomStats {
                       {{ getWorkloadLabel(roomStat.averageDuration) }}
                     </span>
                   </div>
-                  <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div class="w-full bg-gray-200 rounded h-2">
                     <div 
-                      class="h-2 rounded-full transition-all"
+                      class="h-2 rounded transition-all"
                       [class]="getWorkloadBarColor(roomStat.averageDuration)"
                       [style.width.%]="getWorkloadPercentage(roomStat.averageDuration)"
                     ></div>

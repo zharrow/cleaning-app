@@ -61,7 +61,7 @@ CleanTrack est une application moderne de gestion des tâches de nettoyage perme
 
 ## ✅ État Actuel du Projet
 
-### 🎯 **Score de Complétude : 75%**
+### 🎯 **Score de Complétude : 80%**
 
 | Module | Frontend | Backend | Status |
 |--------|----------|---------|---------|
@@ -71,7 +71,7 @@ CleanTrack est une application moderne de gestion des tâches de nettoyage perme
 | **Gestion Tâches** | ✅ 100% | ✅ 100% | 🟢 Fonctionnel |
 | **Tâches Assignées** | ✅ 100% | ✅ 100% | 🟢 Fonctionnel |
 | **Session du Jour** | ✅ 90% | ✅ 100% | 🟡 Quasi-fonctionnel |
-| **Gestion Performers** | ✅ 100% | ⚠️ 60% | 🟡 Limité |
+| **Gestion Performers** | ✅ 100% | ✅ 100% | 🟢 Fonctionnel |
 | **Upload Photos** | ✅ 80% | ❌ 0% | 🔴 Non-fonctionnel |
 | **Historique** | ❌ 0% | ✅ 80% | 🔴 À implémenter |
 | **Export PDF** | ⚠️ 50% | ✅ 100% | 🟡 À finaliser |
@@ -166,20 +166,25 @@ CleanTrack est une application moderne de gestion des tâches de nettoyage perme
 - ❌ Génération d'URLs d'accès
 - ❌ Association des photos aux logs
 
-### 👥 **Gestion Complète des Performers** (100% Frontend, 60% Backend)
-**Status** : Interface complète, endpoints UPDATE/DELETE manquants
+### 👥 **Gestion Complète des Performers** (100% Frontend, 100% Backend) ✅ TERMINÉ
+**Status** : Entièrement fonctionnel avec toutes les fonctionnalités CRUD
 
 **Frontend Implémenté :**
 - ✅ Liste des performers avec interface complète
 - ✅ Création de nouveaux performers
 - ✅ Modification des performers existants
+- ✅ Activation/Désactivation avec toggle
 - ✅ Suppression avec confirmation
+- ✅ Tri automatique (actifs en premier, inactifs en dernier)
+- ✅ Style visuel pour performers inactifs (grisés)
 
-**Backend À Compléter :**
-- ✅ Endpoint `GET /performers`
+**Backend Complet :**
+- ✅ Endpoint `GET /performers` (avec option include_inactive)
+- ✅ Endpoint `GET /performers/{id}`
 - ✅ Endpoint `POST /performers`
-- ❌ Endpoint `PUT /performers/{id}`
-- ❌ Endpoint `DELETE /performers/{id}`
+- ✅ Endpoint `PUT /performers/{id}`
+- ✅ Endpoint `PATCH /performers/{id}/toggle`
+- ✅ Endpoint `DELETE /performers/{id}`
 
 ---
 
@@ -489,7 +494,11 @@ async finalizeSession(sessionId: string): Promise<void> {
 | `GET` | `/sessions/{id}` | Session spécifique | ✅ |
 | `GET` | `/sessions/{id}/logs` | Logs d'une session | ✅ |
 | `GET` | `/performers` | Liste performers | ✅ |
+| `GET` | `/performers/{id}` | Récupérer performer | ✅ |
 | `POST` | `/performers` | Créer performer | ✅ |
+| `PUT` | `/performers/{id}` | Modifier performer | ✅ |
+| `PATCH` | `/performers/{id}/toggle` | Toggle statut performer | ✅ |
+| `DELETE` | `/performers/{id}` | Supprimer performer | ✅ |
 | `POST` | `/exports/pdf/{session_id}` | Export PDF | ✅ |
 
 ### ❌ **Endpoints Manquants (Frontend les appelle)**
@@ -497,8 +506,6 @@ async finalizeSession(sessionId: string): Promise<void> {
 | Méthode | Endpoint | Description | Priorité |
 |---------|----------|-------------|----------|
 | `POST` | `/uploads/photo` | Upload photo tâche | 🔥 CRITIQUE |
-| `PUT` | `/performers/{id}` | Modifier performer | 🟡 MOYENNE |
-| `DELETE` | `/performers/{id}` | Supprimer performer | 🟡 MOYENNE |
 | `PUT` | `/logs/{id}` | Modifier log générique | 🟡 MOYENNE |
 
 ### 🔮 **Endpoints Futurs (pour nouvelles fonctionnalités)**
@@ -723,23 +730,23 @@ describe('FeatureComponent', () => {
 
 ## 🗓️ Roadmap
 
-### 🔥 **Phase 1 - Corrections Critiques (Semaines 1-2)**
+### 🔥 **Phase 1 - Upload Photos (Semaine 1)** 
 
-#### **Semaine 1 : Upload Photos**
+#### **✅ TERMINÉ : Gestion Performers Complète**
+- ✅ Endpoints `PUT/DELETE /performers/{id}` ajoutés
+- ✅ Endpoint `PATCH /performers/{id}/toggle` pour activation
+- ✅ Frontend mis à jour avec tri et styles
+- ✅ Tests intégration frontend-backend
+- ✅ Interface utilisateur optimisée
+
+#### **🔄 EN COURS : Upload Photos**
 - **Lundi** : Créer router `/uploads` backend avec validation
 - **Mardi** : Implémenter stockage fichiers et génération URLs  
 - **Mercredi** : Intégration frontend avec gestion d'erreurs
 - **Jeudi** : Tests upload + validation formats
 - **Vendredi** : Optimisation et nettoyage code
 
-#### **Semaine 2 : Compléter APIs manquantes**
-- **Lundi** : Endpoints `PUT/DELETE /performers/{id}`
-- **Mardi** : Endpoint générique `PUT /logs/{id}`
-- **Mercredi** : Tests intégration frontend
-- **Jeudi** : Gestion d'erreurs et validation
-- **Vendredi** : Documentation API complète
-
-### 📊 **Phase 2 - Page Historique (Semaines 3-4)**
+### 📊 **Phase 2 - Page Historique (Semaines 2-3)**
 
 #### **Semaine 3 : Structure et Backend**
 - **Lundi** : Conception UI/UX page historique

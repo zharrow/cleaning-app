@@ -16,7 +16,7 @@ import { ActivatedRoute } from '@angular/router';
         
         <!-- Icône d'erreur -->
         <div class="mb-8">
-          <div class="inline-flex items-center justify-center w-20 h-20 bg-danger-100 rounded-full mb-4">
+          <div class="inline-flex items-center justify-center w-20 h-20 bg-danger-100 rounded mb-4">
             <span class="text-4xl">{{ errorIcon() }}</span>
           </div>
         </div>

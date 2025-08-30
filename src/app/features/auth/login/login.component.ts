@@ -73,15 +73,15 @@ interface FormErrors {
               <h3 class="text-lg font-semibold text-white mb-2">Fonctionnalités clés</h3>
               <div class="flex flex-col gap-4">
                 <div class="flex items-center gap-4 text-gray-200">
-                  <div class="w-3 h-3 bg-success-400 rounded-full flex-shrink-0"></div>
+                  <div class="w-3 h-3 bg-success-400 rounded flex-shrink-0"></div>
                   <span class="text-base">Planification intelligente des tâches</span>
                 </div>
                 <div class="flex items-center gap-4 text-gray-200">
-                  <div class="w-3 h-3 bg-primary-400 rounded-full flex-shrink-0"></div>
+                  <div class="w-3 h-3 bg-primary-400 rounded flex-shrink-0"></div>
                   <span class="text-base">Suivi en temps réel</span>
                 </div>
                 <div class="flex items-center gap-4 text-gray-200">
-                  <div class="w-3 h-3 bg-warning-400 rounded-full flex-shrink-0"></div>
+                  <div class="w-3 h-3 bg-warning-400 rounded flex-shrink-0"></div>
                   <span class="text-base">Rapports détaillés</span>
                 </div>
               </div>

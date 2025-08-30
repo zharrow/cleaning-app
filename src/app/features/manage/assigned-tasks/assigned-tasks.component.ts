@@ -57,7 +57,7 @@ import { TaskService, AssignedTask, TaskTemplate, Room, Performer, FrequencyConf
                     {{ task.default_performer?.name || 'Non assigné' }}
                   </span>
                   @if (!task.default_performer) {
-                    <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-full ml-2">
+                    <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded ml-2">
                       À assigner
                     </span>
                   }

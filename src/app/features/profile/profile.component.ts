@@ -176,7 +176,7 @@ import { AuthService } from '../../core/services/auth.service';
           <div class="card">
             <div class="card-body text-center">
               @if (authService.appUser(); as user) {
-                <div class="w-20 h-20 bg-primary-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+                <div class="w-20 h-20 bg-primary-100 rounded mx-auto mb-4 flex items-center justify-center">
                   <span class="text-2xl font-bold text-primary-700">
                     {{ getUserInitials(user.full_name) }}
                   </span>

@@ -1,12 +1,3 @@
-/* ========================================
-   Composants CSS réutilisables
-   src/styles/components.css
-   ======================================== */
-
-/* ===================
-   Boutons
-   =================== */
-
 .btn {
   display: inline-flex;
   align-items: center;
@@ -314,13 +305,14 @@
   padding: var(--spacing-1) var(--spacing-2);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
-  border-radius: var(--border-radius-full);
+  border-radius: var(--rounded-md);
   white-space: nowrap;
 }
 
 .badge-primary {
   background-color: var(--color-primary-100);
   color: var(--color-primary-800);
+  padding: var(--spacing-1) var(--spacing-4);
 }
 
 .badge-success {

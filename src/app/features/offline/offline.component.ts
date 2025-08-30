@@ -19,7 +19,7 @@ import { RouterLink } from '@angular/router';
         
         <!-- En-tête -->
         <div class="text-center mb-8">
-          <div class="inline-flex items-center justify-center w-20 h-20 bg-orange-100 rounded-full mb-4">
+          <div class="inline-flex items-center justify-center w-20 h-20 bg-orange-100 rounded mb-4">
             <span class="text-4xl">📡</span>
           </div>
           <h1 class="text-3xl font-bold text-gray-900 mb-2">Mode hors ligne</h1>
@@ -34,7 +34,7 @@ import { RouterLink } from '@angular/router';
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <div 
-                  class="w-3 h-3 rounded-full"
+                  class="w-3 h-3 rounded"
                   [class]="isOnline() ? 'bg-success-500 animate-pulse' : 'bg-danger-500'"
                 ></div>
                 <span class="font-medium">

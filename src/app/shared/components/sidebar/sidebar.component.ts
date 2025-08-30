@@ -46,7 +46,7 @@ interface NavItem {
         <!-- Section 1: Navigation principale -->
         <div class="px-4 mb-8">
           <div class="flex items-center space-x-2 mb-4">
-            <div class="w-1 h-4 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-full"></div>
+            <div class="w-1 h-4 bg-gradient-to-b from-blue-500 to-indigo-600 rounded"></div>
             <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider">
               Navigation
             </h3>
@@ -73,7 +73,7 @@ interface NavItem {
                   
                   <!-- Indicateur actif -->
                   <div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div class="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                    <div class="w-1.5 h-1.5 bg-blue-500 rounded"></div>
                   </div>
                 </a>
               </li>
@@ -85,7 +85,7 @@ interface NavItem {
         @if (showManagementSection()) {
           <div class="px-4 mb-8">
             <div class="flex items-center space-x-2 mb-4">
-              <div class="w-1 h-4 bg-gradient-to-b from-green-500 to-emerald-600 rounded-full"></div>
+              <div class="w-1 h-4 bg-gradient-to-b from-green-500 to-emerald-600 rounded"></div>
               <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider">
                 Gestion
               </h3>
@@ -111,7 +111,7 @@ interface NavItem {
                     
                     <!-- Indicateur actif -->
                     <div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div class="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                      <div class="w-1.5 h-1.5 bg-green-500 rounded"></div>
                     </div>
                   </a>
                 </li>
@@ -130,7 +130,7 @@ interface NavItem {
               <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-md">
                 <span class="text-sm font-bold text-white">{{ getUserInitials() }}</span>
               </div>
-              <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 border-2 border-white rounded-full shadow-sm"></div>
+              <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 border-2 border-white rounded shadow-sm"></div>
             </div>
             <div class="flex-1 min-w-0">
               <p class="text-sm font-semibold text-gray-900 truncate">{{ userName() }}</p>
@@ -169,7 +169,7 @@ interface NavItem {
           >
             <div class="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center group-hover:bg-red-100 group-hover:shadow-sm transition-all duration-200">
               @if (loggingOut()) {
-                <div class="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                <div class="w-4 h-4 border-2 border-red-600 border-t-transparent rounded animate-spin"></div>
               } @else {
                 <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1"></path>
@@ -292,7 +292,8 @@ export class SidebarComponent {
   readonly mainNavItems: NavItem[] = [
     { path: '/dashboard', label: 'Tableau de bord', icon: '🏠' },
     { path: '/session', label: 'Session du jour', icon: '📅' },
-    { path: '/tasks', label: 'Mes tâches', icon: '✅' }
+    { path: '/tasks', label: 'Mes tâches', icon: '✅' },
+    { path: '/history', label: 'Historique', icon: '📚' }
   ];
   
   readonly managementNavItems: NavItem[] = [

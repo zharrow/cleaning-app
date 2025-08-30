@@ -60,7 +60,7 @@ interface NavItem {
             <!-- Indicateur de sync moderne -->
             @if (syncInProgress()) {
               <div class="hidden md:flex items-center space-x-2 px-3 py-1.5 bg-blue-50 rounded-lg">
-                <div class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                <div class="w-3 h-3 bg-blue-500 rounded animate-pulse"></div>
                 <span class="text-xs font-medium text-blue-700">Sync...</span>
               </div>
             }
@@ -153,7 +153,7 @@ interface NavItem {
                       >
                         <div class="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center group-hover:bg-red-100 transition-colors">
                           @if (loggingOut()) {
-                            <div class="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                            <div class="w-4 h-4 border-2 border-red-600 border-t-transparent rounded animate-spin"></div>
                           } @else {
                             <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1"></path>
@@ -180,9 +180,9 @@ interface NavItem {
                   </svg>
                 } @else {
                   <div class="space-y-1">
-                    <div class="w-5 h-0.5 bg-gray-600 rounded-full"></div>
-                    <div class="w-5 h-0.5 bg-gray-600 rounded-full"></div>
-                    <div class="w-5 h-0.5 bg-gray-600 rounded-full"></div>
+                    <div class="w-5 h-0.5 bg-gray-600 rounded"></div>
+                    <div class="w-5 h-0.5 bg-gray-600 rounded"></div>
+                    <div class="w-5 h-0.5 bg-gray-600 rounded"></div>
                   </div>
                 }
               </div>
@@ -235,7 +235,7 @@ interface NavItem {
                   class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-base font-medium text-red-700 hover:bg-red-50 transition-all duration-200 disabled:opacity-50"
                 >
                   @if (loggingOut()) {
-                    <div class="w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                    <div class="w-5 h-5 border-2 border-red-600 border-t-transparent rounded animate-spin"></div>
                   } @else {
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1"></path>

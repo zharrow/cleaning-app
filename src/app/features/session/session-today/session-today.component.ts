@@ -100,10 +100,10 @@ interface TaskValidationModal {
                 {{ getSessionStatusLabel(session.status) }}
               </div>
               
-              @if (canCompleteSession()) {
+              @if (canFinalizeSession()) {
                 <button 
                   class="btn btn-success"
-                  (click)="completeSession()"
+                  (click)="finalizeSession()"
                   [disabled]="completingSession()"
                 >
                   @if (completingSession()) {
@@ -111,7 +111,7 @@ interface TaskValidationModal {
                   } @else {
                     <span class="text-lg">✅</span>
                   }
-                  Terminer la session
+                  Finaliser la session
                 </button>
               }
               
@@ -192,9 +192,9 @@ interface TaskValidationModal {
                   </div>
                   
                   <!-- Mini barre de progression -->
-                  <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                  <div class="w-full bg-gray-200 rounded h-1.5 mt-2">
                     <div 
-                      class="h-1.5 rounded-full transition-all duration-300"
+                      class="h-1.5 rounded transition-all duration-300"
                       [class]="getProgressBarClass(group.progress.percentage)"
                       [style.width.%]="group.progress.percentage"
                     ></div>
@@ -270,9 +270,9 @@ interface TaskValidationModal {
                   
                   <!-- Mini progression par pièce -->
                   <div class="flex items-center gap-3">
-                    <div class="w-20 bg-gray-200 rounded-full h-2">
+                    <div class="w-20 bg-gray-200 rounded h-2">
                       <div 
-                        class="bg-primary-600 h-2 rounded-full transition-all"
+                        class="bg-primary-600 h-2 rounded transition-all"
                         [style.width.%]="group.progress.percentage"
                       ></div>
                     </div>
@@ -294,7 +294,7 @@ interface TaskValidationModal {
                       <!-- Statut visuel -->
                       <div class="flex-shrink-0">
                         <div 
-                          class="w-4 h-4 rounded-full"
+                          class="w-4 h-4 rounded"
                           [style.background-color]="getStatusColor(task.status)"
                         ></div>
                       </div>
@@ -771,13 +771,8 @@ export class SessionTodayComponent {
 
 
   // Permissions
-  readonly canCompleteSession = computed(() => {
-    const session = this.currentSession();
-    const progress = this.globalProgress();
-    return session && 
-           session.status === 'in_progress' && 
-           progress && 
-           progress.percentage >= 80; // Minimum 80% pour terminer
+  readonly canFinalizeSession = computed(() => {
+    return this.apiService.canFinalizeSession();
   });
 
   readonly canExportSession = computed(() => {
@@ -871,16 +866,25 @@ export class SessionTodayComponent {
     }
   }
 
-  async completeSession(): Promise<void> {
+  async finalizeSession(): Promise<void> {
     const session = this.currentSession();
-    if (!session || this.completingSession()) return;
+    if (!session || this.completingSession() || !this.canFinalizeSession()) return;
 
     this.completingSession.set(true);
     try {
-      // TODO: Implémenter l'API pour terminer une session
-      console.log('Terminer session:', session.id);
+      console.log('🚀 Finalisation de la session:', session.id);
+      
+      // Utiliser la méthode complète qui finalise et complète la session
+      await this.apiService.finalizeAndCompleteSession(session.id);
+      
+      console.log('✅ Session finalisée avec succès!');
+      
+      // Rediriger vers l'historique après finalisation
+      // this.router.navigate(['/history']);
+      
     } catch (error) {
-      console.error('Erreur lors de la finalisation:', error);
+      console.error('❌ Erreur lors de la finalisation:', error);
+      alert('Erreur lors de la finalisation de la session');
     } finally {
       this.completingSession.set(false);
     }

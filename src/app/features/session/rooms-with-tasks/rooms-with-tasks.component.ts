@@ -85,7 +85,7 @@ interface RoomWithTasks extends Room {
                 <p class="text-gray-600 text-sm mt-1" *ngIf="room.description">{{ room.description }}</p>
               </div>
               <div class="flex flex-col items-end">
-                <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
                   {{ room.totalTasks }} tâche(s)
                 </span>
                 <span class="text-xs text-gray-500 mt-1" *ngIf="room.estimatedDuration > 0">
@@ -104,7 +104,7 @@ interface RoomWithTasks extends Room {
                 class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
                 
                 <div class="flex-shrink-0">
-                  <div class="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                  <div class="w-2 h-2 bg-blue-500 rounded mt-2"></div>
                 </div>
                 
                 <div class="flex-1 min-w-0">
@@ -171,7 +171,7 @@ interface RoomWithTasks extends Room {
 
       <!-- Loading State -->
       <div *ngIf="taskService.isLoading()" class="flex justify-center items-center py-12">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div class="animate-spin rounded h-8 w-8 border-b-2 border-blue-600"></div>
         <span class="ml-2 text-gray-600">Chargement...</span>
       </div>
     </div>

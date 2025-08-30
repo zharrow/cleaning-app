@@ -190,9 +190,9 @@ interface HistoryFilters {
                   </td>
                   <td>
                     <div class="flex items-center gap-3">
-                      <div class="flex-1 bg-gray-200 rounded-full h-2">
+                      <div class="flex-1 bg-gray-200 rounded h-2">
                         <div 
-                          class="bg-primary-600 h-2 rounded-full transition-all"
+                          class="bg-primary-600 h-2 rounded transition-all"
                           [style.width.%]="getProgressPercentage(session)"
                         ></div>
                       </div>

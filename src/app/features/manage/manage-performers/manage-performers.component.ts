@@ -114,7 +114,7 @@ interface PerformerModal {
                 <div class="flex items-start justify-between mb-4">
                   <div class="flex-1">
                     <div class="flex items-center gap-3 mb-2">
-                      <div class="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                      <div class="w-10 h-10 bg-primary-100 rounded flex items-center justify-center">
                         <span class="text-lg">👤</span>
                       </div>
                       <div>

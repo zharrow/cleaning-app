@@ -253,7 +253,7 @@ interface TemplateFilters {
                       }
                       
                       <div class="flex items-center gap-4 text-sm text-gray-500">
-                        <span class="badge badge-primary">{{ template.category }}</span>
+                        <span class="rounded badge-primary">{{ template.category }}</span>
                         <span>⏱️ {{ template.estimated_duration }}min</span>
                       </div>
                     </div>
