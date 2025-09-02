@@ -105,7 +105,7 @@ interface TemplateFilters {
       </div>
 
       <!-- Statistiques rapides -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <!-- <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="card">
           <div class="card-body">
             <div class="flex items-center justify-between">
@@ -153,7 +153,7 @@ interface TemplateFilters {
             </div>
           </div>
         </div>
-      </div>
+      </div> -->
 
       <!-- Onglets -->
       <div class="mb-6">

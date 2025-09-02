@@ -3,7 +3,7 @@
 // src/app/app.routes.ts
 // ========================================
 import { Routes } from '@angular/router';
-import { authGuard, publicGuard, manageGuard, requireUserDataGuard } from './core/guards/auth.guard';
+import { authGuard, publicGuard, manageGuard, requireUserDataGuard, enterpriseRequiredGuard } from './core/guards/auth.guard';
 
 /**
  * Configuration des routes de l'application
@@ -28,11 +28,22 @@ export const routes: Routes = [
   },
 
   // ===================
-  // Routes protégées
+  // Route de configuration entreprise
+  // ===================
+  {
+    path: 'setup-enterprise',
+    loadComponent: () => import('./features/setup-enterprise/setup-enterprise.component')
+      .then(m => m.SetupEnterpriseComponent),
+    canActivate: [authGuard],
+    title: 'Configuration entreprise - Micro-Crèche'
+  },
+
+  // ===================
+  // Routes protégées avec entreprise requise
   // ===================
   {
     path: '',
-    canActivate: [authGuard],
+    canActivate: [authGuard, enterpriseRequiredGuard],
     children: [
       // Redirection par défaut
       {

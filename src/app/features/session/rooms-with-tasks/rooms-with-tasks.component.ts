@@ -110,7 +110,7 @@ interface RoomWithTasks extends Room {
                 <div class="flex-1 min-w-0">
                   <div class="flex justify-between items-start">
                     <div class="flex-1">
-                      <p class="text-sm font-medium text-gray-900">{{ task.task_template.title }}</p>
+                      <p class="text-sm font-medium text-gray-900">{{ task.task_template.name }}</p>
                       <p class="text-xs text-gray-500 mt-1" *ngIf="task.task_template.description">
                         {{ task.task_template.description }}
                       </p>
@@ -130,7 +130,7 @@ interface RoomWithTasks extends Room {
                       <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                       </svg>
-                      <span class="text-xs text-gray-600">{{ task.default_performer.name }}</span>
+                      <span class="text-xs text-gray-600">{{ task.default_performer!.name ? task.default_performer!.name : 'Aucun' }}</span>
                     </div>
                     
                     <div class="flex items-center space-x-1">
@@ -194,7 +194,7 @@ export class RoomsWithTasksComponent implements OnInit {
       .map(room => {
         const tasks = tasksByRoom.get(room.id) || [];
         const estimatedDuration = tasks.reduce((total, task) => {
-          const taskDuration = task.task_template.estimated_duration || task.task_template.default_duration || 0;
+          const taskDuration = task.task_template.estimated_duration || task.task_template.estimated_duration || 0;
           return total + (taskDuration * task.times_per_day);
         }, 0);
 
@@ -205,7 +205,7 @@ export class RoomsWithTasksComponent implements OnInit {
           estimatedDuration
         } as RoomWithTasks;
       })
-      .sort((a, b) => a.display_order - b.display_order);
+      .sort((a, b) => a.order - b.order);
   });
 
   totalTasksCount = computed(() => {
@@ -220,7 +220,7 @@ export class RoomsWithTasksComponent implements OnInit {
     const performerIds = new Set();
     this.roomsWithAssignedTasks().forEach(room => {
       room.assignedTasks.forEach(task => {
-        performerIds.add(task.default_performer.id);
+        performerIds.add(task.default_performer!.id);
       });
     });
     return performerIds.size;

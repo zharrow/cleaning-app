@@ -86,19 +86,19 @@ interface TaskValidationModal {
                   </div>
                 }
               </div>
-              <p class="page-subtitle">
+              <!-- <p class="page-subtitle">
                 {{ getSessionDescription(session) }}
-              </p>
+              </p> -->
             </div>
             
             <!-- Actions de session -->
             <div class="flex items-center gap-3">
-              <div 
+              <!-- <div 
                 class="badge"
                 [class]="getSessionStatusClass(session.status)"
               >
                 {{ getSessionStatusLabel(session.status) }}
-              </div>
+              </div> -->
               
               @if (canFinalizeSession()) {
                 <button 

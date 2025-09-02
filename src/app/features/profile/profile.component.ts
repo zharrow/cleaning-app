@@ -1,10 +1,11 @@
 // ========================================
 // Composant Profil - src/app/features/profile/profile.component.ts
 // ========================================
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
+import { EnterpriseService } from '../../core/services/enterprise.service';
 
 /**
  * Composant de profil utilisateur
@@ -71,6 +72,146 @@ import { AuthService } from '../../core/services/auth.service';
               }
             </div>
           </div>
+
+          <!-- Informations entreprise -->
+          @if (enterpriseService.hasEnterprise()) {
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Mon entreprise</h3>
+                <button 
+                  type="button"
+                  (click)="toggleEditEnterprise()"
+                  class="btn btn-sm btn-secondary"
+                >
+                  {{ editingEnterprise() ? 'Annuler' : 'Modifier' }}
+                </button>
+              </div>
+              <div class="card-body">
+                @if (enterpriseService.enterprise(); as enterprise) {
+                  <div class="space-y-4">
+                    @if (!editingEnterprise()) {
+                      <!-- Mode lecture -->
+                      <div class="enterprise-display">
+                        <div class="flex items-start gap-4">
+                          @if (enterprise.logo_url) {
+                            <img 
+                              [src]="enterprise.logo_url" 
+                              [alt]="enterprise.name + ' logo'"
+                              class="w-16 h-16 rounded-lg object-cover border"
+                            >
+                          } @else {
+                            <div class="w-16 h-16 rounded-lg bg-gray-100 border flex items-center justify-center">
+                              <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a2 2 0 011-1h2a2 2 0 011 1v5m-4 0h4">
+                                </path>
+                              </svg>
+                            </div>
+                          }
+                          <div class="flex-1 space-y-3">
+                            <div>
+                              <label class="form-label">Nom de l'entreprise</label>
+                              <div class="text-lg font-semibold text-gray-900">{{ enterprise.name }}</div>
+                            </div>
+                            @if (enterprise.legal_form) {
+                              <div>
+                                <label class="form-label">Forme juridique</label>
+                                <div class="text-gray-700">{{ enterprise.legal_form }}</div>
+                              </div>
+                            }
+                            @if (enterprise.siret) {
+                              <div>
+                                <label class="form-label">SIRET</label>
+                                <div class="text-gray-700 font-mono">{{ formatSiret(enterprise.siret) }}</div>
+                              </div>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    } @else {
+                      <!-- Mode édition -->
+                      <form [formGroup]="enterpriseForm" (ngSubmit)="saveEnterprise()" class="space-y-4">
+                        <div class="form-group">
+                          <label class="form-label">Nom de l'entreprise *</label>
+                          <input 
+                            type="text" 
+                            class="form-input" 
+                            formControlName="name"
+                            placeholder="Nom de votre entreprise"
+                          />
+                          @if (enterpriseForm.get('name')?.invalid && enterpriseForm.get('name')?.touched) {
+                            <div class="form-error">Le nom est obligatoire</div>
+                          }
+                        </div>
+                        
+                        <div class="form-group">
+                          <label class="form-label">URL du logo</label>
+                          <input 
+                            type="url" 
+                            class="form-input" 
+                            formControlName="logo_url"
+                            placeholder="https://exemple.com/logo.png"
+                          />
+                        </div>
+                        
+                        <div class="form-group">
+                          <label class="form-label">Forme juridique</label>
+                          <select class="form-input form-select" formControlName="legal_form">
+                            <option value="">-- Sélectionnez --</option>
+                            <option value="SARL">SARL</option>
+                            <option value="SAS">SAS</option>
+                            <option value="SASU">SASU</option>
+                            <option value="EURL">EURL</option>
+                            <option value="SA">SA</option>
+                            <option value="Association">Association</option>
+                            <option value="Entreprise individuelle">Entreprise individuelle</option>
+                            <option value="Micro-entreprise">Micro-entreprise</option>
+                            <option value="Autre">Autre</option>
+                          </select>
+                        </div>
+                        
+                        <div class="form-group">
+                          <label class="form-label">SIRET</label>
+                          <input 
+                            type="text" 
+                            class="form-input" 
+                            formControlName="siret"
+                            placeholder="12345678901234"
+                            maxlength="14"
+                          />
+                        </div>
+                        
+                        <div class="flex gap-3">
+                          <button 
+                            type="submit" 
+                            class="btn btn-primary"
+                            [disabled]="enterpriseForm.invalid || savingEnterprise()"
+                          >
+                            @if (savingEnterprise()) {
+                              <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Enregistrement...
+                            } @else {
+                              Enregistrer
+                            }
+                          </button>
+                          <button 
+                            type="button" 
+                            (click)="cancelEditEnterprise()"
+                            class="btn btn-secondary"
+                          >
+                            Annuler
+                          </button>
+                        </div>
+                      </form>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
 
           <!-- Préférences -->
           <div class="card">
@@ -245,10 +386,13 @@ import { AuthService } from '../../core/services/auth.service';
 })
 export class ProfileComponent {
   readonly authService = inject(AuthService);
+  readonly enterpriseService = inject(EnterpriseService);
   private readonly fb = inject(FormBuilder);
 
   // Signals d'état
   readonly savingPreferences = signal(false);
+  readonly editingEnterprise = signal(false);
+  readonly savingEnterprise = signal(false);
 
   // Formulaire de préférences
   readonly preferencesForm = this.fb.nonNullable.group({
@@ -256,6 +400,14 @@ export class ProfileComponent {
     pushNotifications: [false],
     theme: ['auto'],
     dateFormat: ['dd/MM/yyyy']
+  });
+
+  // Formulaire d'entreprise
+  readonly enterpriseForm = this.fb.nonNullable.group({
+    name: ['', [Validators.required, Validators.minLength(2)]],
+    logo_url: [''],
+    legal_form: [''],
+    siret: ['', [Validators.pattern(/^\d{14}$/)]]
   });
 
   // Statistiques utilisateur (mock)
@@ -268,6 +420,8 @@ export class ProfileComponent {
   constructor() {
     // Charger les préférences depuis le localStorage
     this.loadPreferences();
+    // Charger les données de l'entreprise
+    this.loadEnterpriseData();
   }
 
   /**
@@ -367,5 +521,95 @@ export class ProfileComponent {
       month: 'long',
       year: 'numeric'
     }).format(new Date(dateString));
+  }
+
+  /**
+   * Méthodes pour l'entreprise
+   */
+  private async loadEnterpriseData(): Promise<void> {
+    try {
+      await this.enterpriseService.loadEnterpriseData();
+      // Remplir le formulaire avec les données existantes
+      const enterprise = this.enterpriseService.enterprise();
+      if (enterprise) {
+        this.enterpriseForm.patchValue({
+          name: enterprise.name,
+          logo_url: enterprise.logo_url || '',
+          legal_form: enterprise.legal_form || '',
+          siret: enterprise.siret || ''
+        });
+      }
+    } catch (error) {
+      console.warn('Impossible de charger les données de l\'entreprise:', error);
+    }
+  }
+
+  toggleEditEnterprise(): void {
+    if (this.editingEnterprise()) {
+      this.cancelEditEnterprise();
+    } else {
+      this.editingEnterprise.set(true);
+      // Remplir le formulaire avec les données actuelles
+      const enterprise = this.enterpriseService.enterprise();
+      if (enterprise) {
+        this.enterpriseForm.patchValue({
+          name: enterprise.name,
+          logo_url: enterprise.logo_url || '',
+          legal_form: enterprise.legal_form || '',
+          siret: enterprise.siret || ''
+        });
+      }
+    }
+  }
+
+  cancelEditEnterprise(): void {
+    this.editingEnterprise.set(false);
+    this.enterpriseForm.reset();
+    // Restaurer les valeurs originales
+    const enterprise = this.enterpriseService.enterprise();
+    if (enterprise) {
+      this.enterpriseForm.patchValue({
+        name: enterprise.name,
+        logo_url: enterprise.logo_url || '',
+        legal_form: enterprise.legal_form || '',
+        siret: enterprise.siret || ''
+      });
+    }
+  }
+
+  async saveEnterprise(): Promise<void> {
+    if (this.enterpriseForm.invalid || this.savingEnterprise()) {
+      return;
+    }
+
+    this.savingEnterprise.set(true);
+    try {
+      const formData = this.enterpriseForm.getRawValue();
+      
+      // Nettoyer les données
+      const updateData = {
+        name: formData.name,
+        logo_url: formData.logo_url || undefined,
+        legal_form: formData.legal_form || undefined,
+        siret: formData.siret || undefined
+      };
+
+      await this.enterpriseService.updateEnterprise(updateData);
+      this.editingEnterprise.set(false);
+
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde de l\'entreprise:', error);
+    } finally {
+      this.savingEnterprise.set(false);
+    }
+  }
+
+  formatSiret(siret: string): string {
+    if (!siret || siret.length !== 14) {
+      return siret;
+    }
+    
+    // Formater le SIRET comme: 123 456 789 01234
+    return siret.replace(/(\d{3})(\d{3})(\d{3})(\d{5})/, '$1 $2 $3 $4');
   }
 }

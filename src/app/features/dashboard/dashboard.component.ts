@@ -61,7 +61,6 @@ interface RecentActivity {
           
           <!-- En-tête avec salutation -->
           <div class="page-header">
-            <div class="text-center">
               <h1 class="text-3xl font-bold text-gray-900 mb-2">
                 {{ getGreeting() }}
                 @if (displayName(); as name) {
@@ -69,19 +68,6 @@ interface RecentActivity {
                 }
               </h1>
               <p class="text-gray-600 mb-4">{{ getCurrentDateFormatted() }}</p>
-              
-              <!-- État utilisateur -->
-              <div class="flex justify-center items-center gap-4">
-                <span class="inline-flex items-center px-3 py-1 rounded text-sm font-medium bg-green-100 text-green-800">
-                  ✅ Connecté
-                </span>
-                @if (userRole()) {
-                  <span class="inline-flex items-center px-3 py-1 rounded text-sm font-medium bg-blue-100 text-blue-800">
-                    {{ getRoleLabel() }}
-                  </span>
-                }
-              </div>
-            </div>
           </div>
 
           <!-- Cartes de statistiques -->
@@ -221,8 +207,7 @@ interface RecentActivity {
   `,
   styles: [`
     .page-container {
-      max-width: 1200px;
-      margin: 0 auto;
+      margin: 50px auto;
       padding: 2rem 1rem;
     }
     

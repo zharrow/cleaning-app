@@ -6,6 +6,7 @@ import { Component, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../../core/services/auth.service';
 import { ApiService } from '../../../core/services/api.service';
+import { EnterpriseService } from '../../../core/services/enterprise.service';
 
 /**
  * Interface pour les statistiques de progression
@@ -33,8 +34,31 @@ interface ProgressStats {
       <!-- Ligne principale du header -->
       <div class="header-top">
         
-        <!-- Espace équilibrant (invisible mais même largeur que les actions) -->
-        <div class="header-spacer"></div>
+        <!-- Zone gauche: Logo et nom de l'entreprise -->
+        <div class="header-left">
+          <div class="enterprise-info">
+            @if (enterpriseLogo(); as logoUrl) {
+              <img 
+                [src]="logoUrl" 
+                [alt]="enterpriseName() + ' logo'"
+                class="enterprise-logo"
+                (error)="onLogoError($event)"
+              >
+            } @else {
+              <div class="enterprise-logo-placeholder">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a2 2 0 011-1h2a2 2 0 011 1v5m-4 0h4">
+                  </path>
+                </svg>
+              </div>
+            }
+            <div class="enterprise-details">
+              <h1 class="enterprise-name">{{ enterpriseName() || 'Micro-Crèche' }}</h1>
+              <span class="enterprise-subtitle">Gestion du nettoyage</span>
+            </div>
+          </div>
+        </div>
         
         <!-- Zone centrale: Status et progression condensée -->
         <div class="header-center">
@@ -174,10 +198,66 @@ interface ProgressStats {
       padding: 0.75rem 2rem;
       max-width: 1400px;
       margin: 0 auto;
+      gap: 2rem;
     }
 
-    .header-spacer {
-      /* Espace équilibrant pour centrer parfaitement */
+    /* =======================
+       ZONE ENTREPRISE (GAUCHE)
+       ======================= */
+    .header-left {
+      display: flex;
+      align-items: center;
+    }
+
+    .enterprise-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.5rem;
+    }
+
+    .enterprise-logo,
+    .enterprise-logo-placeholder {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    .enterprise-logo {
+      object-fit: cover;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .enterprise-logo-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      color: #6b7280;
+    }
+
+    .enterprise-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+    }
+
+    .enterprise-name {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    .enterprise-subtitle {
+      font-size: 0.75rem;
+      color: #64748b;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
 
@@ -618,10 +698,15 @@ export class HeaderComponent {
   // Services injectés
   readonly authService = inject(AuthService);
   readonly apiService = inject(ApiService);
+  readonly enterpriseService = inject(EnterpriseService);
   
   // Signaux d'état
   readonly refreshing = signal(false);
   readonly actionMenuOpen = signal(false);
+  
+  // Computed signals pour l'entreprise
+  readonly enterpriseName = computed(() => this.enterpriseService.enterpriseName());
+  readonly enterpriseLogo = computed(() => this.enterpriseService.enterpriseLogo());
   
   // Computed signals avec vraies données
   readonly progressStats = computed((): ProgressStats => {
@@ -671,7 +756,28 @@ export class HeaderComponent {
   
   
   constructor() {
-    // Les données sont maintenant chargées automatiquement via les computed signals
+    // Charger les données de l'entreprise au démarrage
+    this.loadEnterpriseData();
+  }
+
+  /**
+   * Charger les données de l'entreprise
+   */
+  private async loadEnterpriseData(): Promise<void> {
+    try {
+      await this.enterpriseService.loadEnterpriseData();
+    } catch (error) {
+      console.warn('Impossible de charger les données de l\'entreprise:', error);
+    }
+  }
+
+  /**
+   * Gestion des erreurs de logo
+   */
+  onLogoError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    console.warn('Erreur lors du chargement du logo:', img.src);
+    // Le logo sera remplacé par le placeholder via le template Angular
   }
   
   /**

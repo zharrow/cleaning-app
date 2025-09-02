@@ -4,7 +4,9 @@
 // ========================================
 import { inject } from '@angular/core';
 import { Router, type CanActivateFn, type CanMatchFn } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { AuthService, type AppRole } from '../services/auth.service';
+import { EnterpriseService } from '../services/enterprise.service';
 
 /**
  * Guard d'authentification fonctionnel
@@ -221,4 +223,35 @@ export const devOnlyGuard: CanActivateFn = () => {
   return authService.authReady() && authService.isAuthenticated()
     ? true
     : router.createUrlTree(['/login']);
+};
+
+/**
+ * Guard pour vérifier qu'une entreprise existe et est configurée
+ * Redirige vers /setup-enterprise si pas d'entreprise
+ */
+export const enterpriseRequiredGuard: CanActivateFn = async () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+  const enterpriseService = inject(EnterpriseService);
+  
+  // Vérifier d'abord l'authentification
+  if (!authService.authReady() || !authService.isAuthenticated()) {
+    return router.createUrlTree(['/login']);
+  }
+  
+  try {
+    const existsResponse = await enterpriseService.checkEnterpriseExists();
+    
+    // Si pas d'entreprise, rediriger vers setup
+    if (!existsResponse.exists) {
+      return router.createUrlTree(['/setup-enterprise']);
+    }
+    
+    return true;
+    
+  } catch (error) {
+    console.warn('Erreur lors de la vérification de l\'entreprise:', error);
+    // En cas d'erreur, autoriser l'accès (fallback)
+    return true;
+  }
 };
