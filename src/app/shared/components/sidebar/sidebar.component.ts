@@ -26,19 +26,6 @@ interface NavItem {
   imports: [CommonModule, RouterLink, RouterLinkActive],
   template: `
     <aside class="bg-white/95 backdrop-blur-lg h-screen w-64 shadow-xl border-r border-gray-100 flex flex-col">
-      
-      <!-- Header avec logo moderne -->
-      <div class="p-6 border-b border-gray-100">
-        <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
-            <span class="text-xl">🧹</span>
-          </div>
-          <div>
-            <span class="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">CleanTrack</span>
-            <p class="text-xs text-gray-500 mt-0.5">Gestion de nettoyage</p>
-          </div>
-        </div>
-      </div>
 
       <!-- Navigation principale -->
       <nav class="flex-1 overflow-y-auto py-6">

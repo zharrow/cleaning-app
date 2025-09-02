@@ -198,7 +198,7 @@ interface ProgressStats {
       padding: 0.75rem 2rem;
       max-width: 1400px;
       margin: 0 auto;
-      gap: 2rem;
+      gap: 2rem;  
     }
 
     /* =======================
