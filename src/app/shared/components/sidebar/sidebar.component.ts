@@ -284,9 +284,10 @@ export class SidebarComponent {
   ];
   
   readonly managementNavItems: NavItem[] = [
-    { path: '/manage/tasks', label: 'Gestion des tâches', icon: '⚙️' },
-    { path: '/manage/rooms', label: 'Gestion des pièces', icon: '🏠' },
-    { path: '/manage/performers', label: 'Gestion de l\'équipe', icon: '👥' }
+    { path: '/manage/tasks', label: 'Tâches', icon: '📝' },
+    { path: '/manage/assign-tasks', label: 'Assignation', icon: '📌' },
+    { path: '/manage/rooms', label: 'Pièces', icon: '🏠' },
+    { path: '/manage/performers', label: 'Intervenants', icon: '👥' }
   ];
   
   // Computed signals

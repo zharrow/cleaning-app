@@ -31,82 +31,31 @@ interface FormErrors {
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule],
   template: `
-    <div class="min-h-screen flex px-4 lg:px-8 py-6">
-      <!-- Left side - Visual/Branding -->
-      <div class="hidden lg:flex lg:flex-1 relative bg-gradient-dark overflow-hidden rounded-3xl mr-8">
-        <!-- Background orbs -->
-        <div class="absolute inset-0">
-          <div class="absolute w-80 h-80 orb orb-primary animate-pulse" style="top: 20%; left: 20%;"></div>
-          <div class="absolute w-60 h-60 orb orb-secondary animate-pulse animate-delay-1000" style="bottom: 20%; right: 20%;"></div>
-        </div>
-        
-        <!-- Content -->
-        <div class="relative z-10 flex flex-col justify-center px-12 py-12">
-          <div class="flex flex-col gap-12">
-            <!-- Logo -->
-            <div class="flex items-center gap-4">
-              <div class="w-14 h-14 glass-dark rounded-xl flex items-center justify-center">
-                <span class="text-3xl">🧹</span>
-              </div>
-              <div>
-                <h1 class="text-3xl font-bold text-white">CleanCare</h1>
-                <p class="text-success-400 text-base font-semibold">Nettoyage Professionnel</p>
-              </div>
-            </div>
-            
-            <!-- Hero text -->
-            <div class="flex flex-col gap-6">
-              <h2 class="text-5xl font-extrabold text-white leading-tight">
-                Gérez vos<br>
-                <span class="text-gradient-accent">
-                  opérations
-                </span><br>
-                de nettoyage
-              </h2>
-              <p class="text-xl text-gray-300 leading-relaxed max-w-lg">
-                Une solution complète pour planifier, suivre et optimiser vos activités de nettoyage professionnel.
-              </p>
-            </div>
-            
-            <!-- Features -->
-            <div class="flex flex-col gap-5">
-              <h3 class="text-lg font-semibold text-white mb-2">Fonctionnalités clés</h3>
-              <div class="flex flex-col gap-4">
-                <div class="flex items-center gap-4 text-gray-200">
-                  <div class="w-3 h-3 bg-success-400 rounded flex-shrink-0"></div>
-                  <span class="text-base">Planification intelligente des tâches</span>
-                </div>
-                <div class="flex items-center gap-4 text-gray-200">
-                  <div class="w-3 h-3 bg-primary-400 rounded flex-shrink-0"></div>
-                  <span class="text-base">Suivi en temps réel</span>
-                </div>
-                <div class="flex items-center gap-4 text-gray-200">
-                  <div class="w-3 h-3 bg-warning-400 rounded flex-shrink-0"></div>
-                  <span class="text-base">Rapports détaillés</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <!-- Arrière-plan avec blob unique -->
+    <div class="min-h-screen relative overflow-hidden simple-blob-background">
+      <!-- Blob unique qui se déforme et change de couleur -->
+      <div class="absolute inset-0 overflow-hidden">
+        <div class="absolute w-[120vw] h-[120vh] animate-morphing-color-blob" 
+             style="top: -10%; left: -10%; filter: blur(80px); background: linear-gradient(45deg, #667eea, #764ba2); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;"></div>
       </div>
-
-      <!-- Right side - Login Form -->
-      <div class="flex-1 flex items-center justify-center px-6 py-12 bg-white lg:px-12">
-        <div class="w-full" style="max-width: 24rem;">
-          <div class="flex flex-col gap-8 animate-slide-up">
-            <!-- Mobile logo -->
-            <div class="lg:hidden text-center">
-              <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-2xl mb-4">
+      
+      <div class="relative z-10 min-h-screen flex items-center justify-center px-4 py-6">
+        <!-- Formulaire de connexion centré -->
+        <div class="w-full glass animate-glass-fade-in" style="max-width: 38rem; padding: 2.5rem;">
+          <div class="flex flex-col gap-8">
+            <!-- Logo centré -->
+            <div class="text-center">
+              <div class="inline-flex items-center justify-center w-16 h-16 glass-strong rounded-2xl mb-4 hover:scale-110 transition-transform">
                 <span class="text-2xl">🧹</span>
               </div>
-              <h1 class="text-2xl font-bold text-primary">CleanCare</h1>
-              <p class="text-secondary text-sm">Nettoyage Professionnel</p>
+              <h1 class="text-2xl font-bold" style="color: var(--text-on-glass);">CleanCare</h1>
+              <p class="text-sm" style="color: var(--text-on-glass-muted);">Nettoyage Professionnel</p>
             </div>
             
             <!-- Form header -->
-            <div class="text-center lg:text-left">
-              <h2 class="text-3xl font-bold text-primary">Connexion</h2>
-              <p class="mt-2 text-secondary">Accédez à votre espace de travail</p>
+            <div class="text-center">
+              <h2 class="text-3xl font-bold" style="color: var(--text-on-glass);">Connexion</h2>
+              <p class="mt-2" style="color: var(--text-on-glass-muted);">Accédez à votre espace de travail</p>
             </div>
             
             <!-- Messages d'alerte -->
@@ -143,27 +92,36 @@ interface FormErrors {
               
               <!-- Champ email -->
               <div class="form-group">
-                <label for="email" class="form-label">
+                <label for="email" class="form-label" style="color: var(--text-on-glass);">
                   Adresse email
                 </label>
                 <input
                   id="email"
                   type="email"
                   formControlName="email"
-                  class="form-input"
+                  class="form-input form-glass"
                   [class.error]="hasFieldError('email')"
+                  [class.success]="isFieldValid('email')"
                   placeholder="nom@exemple.com"
                   autocomplete="email"
                   [disabled]="isSubmitting()"
                 />
                 @if (hasFieldError('email')) {
-                  <div class="form-error">{{ getFieldError('email') }}</div>
+                  <div class="form-error animate-slide-down">{{ getFieldError('email') }}</div>
+                }
+                @if (isFieldValid('email')) {
+                  <div class="form-success animate-slide-down">
+                    <svg class="w-4 h-4 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                    Email valide
+                  </div>
                 }
               </div>
 
               <!-- Champ mot de passe -->
               <div class="form-group">
-                <label for="password" class="form-label">
+                <label for="password" class="form-label" style="color: var(--text-on-glass);">
                   Mot de passe
                 </label>
                 <div class="relative">
@@ -171,8 +129,9 @@ interface FormErrors {
                     id="password"
                     [type]="showPassword() ? 'text' : 'password'"
                     formControlName="password"
-                    class="form-input pr-12"
+                    class="form-input form-glass pr-12"
                     [class.error]="hasFieldError('password')"
+                    [class.success]="isFieldValid('password')"
                     placeholder="••••••••"
                     autocomplete="current-password"
                     [disabled]="isSubmitting()"
@@ -195,7 +154,15 @@ interface FormErrors {
                   </button>
                 </div>
                 @if (hasFieldError('password')) {
-                  <div class="form-error">{{ getFieldError('password') }}</div>
+                  <div class="form-error animate-slide-down">{{ getFieldError('password') }}</div>
+                }
+                @if (isFieldValid('password')) {
+                  <div class="form-success animate-slide-down">
+                    <svg class="w-4 h-4 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                    Mot de passe valide
+                  </div>
                 }
               </div>
 
@@ -208,7 +175,7 @@ interface FormErrors {
                     class="w-4 h-4 rounded border text-primary-600 focus:ring-primary-500 focus:ring-2 focus:ring-offset-0"
                     [disabled]="isSubmitting()"
                   />
-                  <span class="ml-2 text-sm text-secondary">Se souvenir de moi</span>
+                  <span class="ml-2 text-sm" style="color: var(--text-on-glass-muted);">Se souvenir de moi</span>
                 </label>
                 
                 <button
@@ -237,12 +204,13 @@ interface FormErrors {
             </form>
 
             <!-- Aide -->
-            <div class="text-center pt-6 border-t">
-              <p class="text-sm text-secondary">
+            <div class="text-center pt-6 border-t border-white/20">
+              <p class="text-sm" style="color: var(--text-on-glass-muted);">
                 Première connexion ? 
                 <button
                   type="button"
-                  class="font-medium text-primary hover:text-primary-600 transition-all underline underline-offset-4"
+                  class="font-medium hover:underline transition-all underline-offset-4"
+                  style="color: var(--text-on-glass);"
                   (click)="showForgotPassword()"
                 >
                   Contactez l'administrateur
@@ -252,7 +220,7 @@ interface FormErrors {
 
             <!-- Footer -->
             <div class="text-center pt-8">
-              <div class="flex items-center justify-center gap-6 text-xs text-muted">
+              <div class="flex items-center justify-center gap-6 text-xs" style="color: var(--text-on-glass-subtle);">
                 <div class="flex items-center gap-1">
                   <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2z" clip-rule="evenodd" />
@@ -276,7 +244,7 @@ interface FormErrors {
     <!-- Modal "Mot de passe oublié" -->
     @if (showForgotPasswordModal()) {
       <div class="modal-overlay animate-fade-in" (click)="closeForgotPassword()">
-        <div class="modal-content animate-fade-in-scale" style="max-width: 32rem;" (click)="$event.stopPropagation()">
+        <div class="modal-content glass animate-glass-fade-in" style="max-width: 32rem;" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <div class="flex items-center gap-3">
               <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
@@ -501,6 +469,11 @@ export class LoginComponent {
     };
     
     return messages[errorType] || 'Une erreur est survenue.';
+  }
+
+  isFieldValid(field: string): boolean {
+    const control = this.loginFormGroup.get(field);
+    return !!(control && control.valid && (control.touched || control.dirty) && control.value);
   }
 
   /**

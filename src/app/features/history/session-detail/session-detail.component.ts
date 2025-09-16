@@ -4,7 +4,7 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { ApiService, type CleaningSession, type CleaningLog } from '../../../core/services/api.service';
+import { ApiService, type CleaningSession, type CleaningLog, type PdfExportOptions } from '../../../core/services/api.service';
 
 /**
  * Interface pour les détails complets d'une session
@@ -80,18 +80,21 @@ interface SessionDetail extends CleaningSession {
                 {{ getStatusLabel(session.status) }}
               </span>
               
-              <button 
-                class="btn btn-secondary"
-                (click)="downloadReport()"
-                [disabled]="downloadingReport()"
-              >
-                @if (downloadingReport()) {
-                  <div class="spinner spinner-sm"></div>
-                } @else {
-                  <span class="text-lg">📄</span>
-                }
-                Télécharger le rapport
-              </button>
+              <!-- Bouton d'export avec options -->
+              <div class="relative">
+                <button
+                  class="btn btn-secondary"
+                  (click)="showExportModal()"
+                  [disabled]="downloadingReport()"
+                >
+                  @if (downloadingReport()) {
+                    <div class="spinner spinner-sm"></div>
+                  } @else {
+                    <span class="text-lg">📄</span>
+                  }
+                  Exporter PDF
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -351,7 +354,7 @@ interface SessionDetail extends CleaningSession {
 
     <!-- Modal Photo -->
     @if (selectedPhoto()) {
-      <div 
+      <div
         class="modal-overlay"
         (click)="closePhotoModal()"
       >
@@ -361,11 +364,96 @@ interface SessionDetail extends CleaningSession {
             <button class="modal-close" (click)="closePhotoModal()">✕</button>
           </div>
           <div class="modal-body p-0">
-            <img 
-              [src]="selectedPhoto()" 
+            <img
+              [src]="selectedPhoto()"
               alt="Photo de la tâche"
               class="w-full h-auto max-h-[80vh] object-contain"
             />
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Modal Export PDF -->
+    @if (showingExportModal()) {
+      <div
+        class="modal-overlay"
+        (click)="hideExportModal()"
+      >
+        <div class="modal-content max-w-md" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3 class="modal-title">Options d'Export PDF</h3>
+            <button class="modal-close" (click)="hideExportModal()">✕</button>
+          </div>
+          <div class="modal-body">
+            <form class="space-y-6">
+              <!-- Inclure photos -->
+              <div class="form-group">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    [checked]="exportOptions().includePhotos"
+                    (change)="updateExportOption('includePhotos', $event)"
+                    class="form-checkbox"
+                  />
+                  <span class="text-sm font-medium">Inclure les photos</span>
+                </label>
+                <p class="text-xs text-gray-500 mt-1">
+                  Ajouter toutes les photos de validation au rapport PDF
+                </p>
+              </div>
+
+              <!-- Nombre max de photos (si photos incluses) -->
+              @if (exportOptions().includePhotos) {
+                <div class="form-group">
+                  <label class="form-label text-sm">Nombre maximum de photos</label>
+                  <select
+                    [value]="exportOptions().maxPhotos"
+                    (change)="updateExportOption('maxPhotos', $event)"
+                    class="form-select"
+                  >
+                    <option value="5">5 photos</option>
+                    <option value="10">10 photos</option>
+                    <option value="20">20 photos</option>
+                    <option value="50">Toutes les photos</option>
+                  </select>
+                </div>
+              }
+
+              <!-- Type de format -->
+              <div class="form-group">
+                <label class="form-label text-sm">Format du rapport</label>
+                <select
+                  [value]="exportOptions().formatType"
+                  (change)="updateExportOption('formatType', $event)"
+                  class="form-select"
+                >
+                  <option value="standard">Standard - Rapport complet</option>
+                  <option value="summary">Résumé - Vue d'ensemble</option>
+                  <option value="detailed">Détaillé - Toutes les informations</option>
+                </select>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-ghost"
+              (click)="hideExportModal()"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              (click)="downloadReportWithOptions()"
+              [disabled]="downloadingReport()"
+            >
+              @if (downloadingReport()) {
+                <div class="spinner spinner-sm"></div>
+              }
+              Télécharger PDF
+            </button>
           </div>
         </div>
       </div>
@@ -392,70 +480,60 @@ export class SessionDetailComponent implements OnInit {
   readonly downloadingReport = signal(false);
   readonly selectedPhoto = signal<string | null>(null);
 
-  // Mock data pour la session (à remplacer par l'API)
-  readonly sessionDetail = signal<SessionDetail | null>({
-    id: '1',
-    date: '2024-01-15',
-    status: 'completed',
-    total_tasks: 25,
-    completed_tasks: 25,
-    created_at: '2024-01-15T08:00:00Z',
-    updated_at: '2024-01-15T11:30:00Z',
-    performers: ['Marie Dupont', 'Pierre Martin', 'Sophie Bernard'],
-    photos: ['photo1.jpg', 'photo2.jpg', 'photo3.jpg'],
-    notes: ['Quelques observations importantes'],
-    logs: [
-      {
-        id: '1',
-        session_id: '1',
-        assigned_task_id: '1',
-        status: 'done',
-        performed_by: 'Marie Dupont',
-        notes: 'Nettoyage complet effectué',
-        photos: ['photo1.jpg'],
-        started_at: '2024-01-15T08:15:00Z',
-        completed_at: '2024-01-15T08:30:00Z',
-        assigned_task: {
-          id: '1',
-          room_id: '1',
-          task_template_id: '1',
-          frequency_days: {
-            type: 'daily' as const,
-            times_per_day: 2,
-            days: []
-          },
-          suggested_time: '08:00',
-          default_performer: {
-            id: '1',
-            name: 'Marie Dupont',
-          },
-          is_active: true,
-          room: {
-            id: '1',
-            name: 'Salle d\'activités',
-            description: 'Espace principal de jeu',
-            order: 1,
-            created_at: '2024-01-01T00:00:00Z',
-            updated_at: '2024-01-01T00:00:00Z'
-          },
-          task_template: {
-            id: '1',
-            name: 'Nettoyer les surfaces',
-            description: 'Nettoyer et désinfecter toutes les surfaces',
-            category: 'Surfaces',
-            estimated_duration: 15,
-            created_at: '2024-01-01T00:00:00Z',
-            updated_at: '2024-01-01T00:00:00Z'
-          },
-          created_at: '2024-01-01T00:00:00Z',
-          times_per_day: 2
-        },
-        created_at: '2024-01-15T08:15:00Z',
-        updated_at: '2024-01-15T08:30:00Z'
-      }
-      // Plus de logs...
-    ]
+  // Export modal
+  readonly showingExportModal = signal(false);
+  readonly exportOptions = signal<PdfExportOptions>({
+    includePhotos: true,
+    maxPhotos: 10,
+    formatType: 'standard'
   });
+
+  // Session data chargée depuis l'API
+  readonly sessionDetail = signal<SessionDetail | null>(null);
+
+  async ngOnInit() {
+    // Récupérer l'ID de la session depuis les paramètres de route
+    this.route.paramMap.subscribe(params => {
+      const sessionId = params.get('sessionId');
+      if (sessionId) {
+        this.sessionId.set(sessionId);
+        this.loadSessionDetail(sessionId);
+      }
+    });
+  }
+
+  /**
+   * Charge les détails complets d'une session
+   */
+  async loadSessionDetail(sessionId: string): Promise<void> {
+    this.isLoading.set(true);
+    try {
+      // Charger la session de base
+      const session = await this.apiService.getSession(sessionId);
+
+      // Charger les logs de la session
+      const logs = await this.apiService.getSessionLogs(sessionId);
+
+      // Charger les statistiques pour les données enrichies
+      const stats = await this.apiService.getSessionStatistics(sessionId);
+
+      // Construire l'objet SessionDetail enrichi
+      const sessionDetail: SessionDetail = {
+        ...session,
+        logs: logs || [],
+        performers: stats.top_performers?.map((p: any) => p.name) || [],
+        photos: logs?.flatMap(log => log.photos || []).filter(Boolean) || [],
+        notes: logs?.map(log => log.notes).filter((note): note is string => Boolean(note)) || []
+      };
+
+      this.sessionDetail.set(sessionDetail);
+    } catch (error) {
+      console.error('Erreur lors du chargement de la session:', error);
+      this.sessionDetail.set(null);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
 
   // Computed
   readonly groupedLogs = computed(() => {
@@ -487,50 +565,20 @@ export class SessionDetailComponent implements OnInit {
     }).sort((a, b) => a.roomName.localeCompare(b.roomName));
   });
 
-  ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('sessionId');
-    if (id) {
-      this.sessionId.set(id);
-      this.loadSessionDetail(id);
-    }
-  }
-
-  /**
-   * Chargement des données
-   */
-  private async loadSessionDetail(sessionId: string): Promise<void> {
-    this.isLoading.set(true);
-    try {
-      // TODO: Charger les données depuis l'API
-      console.log('Chargement session:', sessionId);
-      
-      // Simulation d'un délai
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-    } catch (error) {
-      console.error('Erreur lors du chargement:', error);
-      this.sessionDetail.set(null);
-    } finally {
-      this.isLoading.set(false);
-    }
-  }
 
   /**
    * Actions
    */
   async downloadReport(): Promise<void> {
-    const session = this.sessionDetail();
-    if (!session || this.downloadingReport()) return;
+    const sessionId = this.sessionId();
+    if (!sessionId || this.downloadingReport()) return;
 
     this.downloadingReport.set(true);
     try {
-      // TODO: Implémenter le téléchargement via l'API
-      console.log('Téléchargement rapport session:', session.id);
-      
-      // Simulation
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await this.apiService.exportSessionToPdf(sessionId);
     } catch (error) {
       console.error('Erreur lors du téléchargement:', error);
+      alert('Erreur lors du téléchargement du rapport PDF');
     } finally {
       this.downloadingReport.set(false);
     }
@@ -542,6 +590,51 @@ export class SessionDetailComponent implements OnInit {
 
   closePhotoModal(): void {
     this.selectedPhoto.set(null);
+  }
+
+  /**
+   * Gestion modal d'export
+   */
+  showExportModal(): void {
+    this.showingExportModal.set(true);
+  }
+
+  hideExportModal(): void {
+    this.showingExportModal.set(false);
+  }
+
+  updateExportOption(key: keyof PdfExportOptions, event: any): void {
+    const currentOptions = this.exportOptions();
+    let value: any;
+
+    if (key === 'includePhotos') {
+      value = event.target.checked;
+    } else if (key === 'maxPhotos') {
+      value = parseInt(event.target.value);
+    } else {
+      value = event.target.value;
+    }
+
+    this.exportOptions.set({
+      ...currentOptions,
+      [key]: value
+    });
+  }
+
+  async downloadReportWithOptions(): Promise<void> {
+    const sessionId = this.sessionId();
+    if (!sessionId || this.downloadingReport()) return;
+
+    this.downloadingReport.set(true);
+    try {
+      await this.apiService.exportSessionToPdf(sessionId, this.exportOptions());
+      this.hideExportModal();
+    } catch (error) {
+      console.error('Erreur lors du téléchargement:', error);
+      alert('Erreur lors du téléchargement du rapport PDF');
+    } finally {
+      this.downloadingReport.set(false);
+    }
   }
 
   /**

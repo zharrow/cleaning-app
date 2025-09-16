@@ -5,19 +5,16 @@ import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { ApiService, type CleaningSession } from '../../../core/services/api.service';
 
 /**
- * Interface pour les sessions d'historique
+ * Interface pour les sessions d'historique avec statistiques calculées
  */
-interface HistorySession {
-  readonly id: string;
-  readonly date: string;
-  readonly status: 'completed' | 'incomplete' | 'in_progress';
+interface HistorySessionWithStats extends CleaningSession {
   readonly total_tasks: number;
   readonly completed_tasks: number;
   readonly duration?: number;
   readonly performer_count: number;
-  readonly created_at: string;
 }
 
 /**
@@ -49,6 +46,18 @@ interface HistoryFilters {
           </div>
           
           <div class="flex items-center gap-3">
+            <button
+              class="btn btn-secondary"
+              (click)="loadSessions()"
+              [disabled]="isLoading()"
+            >
+              @if (isLoading()) {
+                <div class="spinner spinner-sm"></div>
+              } @else {
+                <span class="text-lg">🔄</span>
+              }
+              Actualiser
+            </button>
             <button class="btn btn-secondary" (click)="exportHistory()">
               <span class="text-lg">📊</span>
               Exporter
@@ -68,7 +77,7 @@ interface HistoryFilters {
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-gray-600">Sessions totales</p>
-                <p class="text-2xl font-bold text-gray-900">{{ mockSessions().length }}</p>
+                <p class="text-2xl font-bold text-gray-900">{{ sessions().length }}</p>
               </div>
               <span class="text-3xl">📊</span>
             </div>
@@ -138,7 +147,7 @@ interface HistoryFilters {
                 (change)="updateFilter('status', $event)"
               >
                 <option value="all">Tous les statuts</option>
-                <option value="completed">Complètes</option>
+                <option value="completed">Terminées</option>
                 <option value="incomplete">Incomplètes</option>
                 <option value="in_progress">En cours</option>
               </select>
@@ -259,76 +268,115 @@ interface HistoryFilters {
   `]
 })
 export class SessionHistoryComponent {
+  private readonly apiService = inject(ApiService);
+
+  // État local
+  readonly sessions = signal<HistorySessionWithStats[]>([]);
+  readonly isLoading = signal(false);
+
   // Filtres
   readonly filters = signal<HistoryFilters>({
     period: 'all',
     status: 'all'
   });
 
-  // Mock data - à remplacer par l'API
-  readonly mockSessions = signal<HistorySession[]>([
-    {
-      id: '1',
-      date: '2024-01-15',
-      status: 'completed',
-      total_tasks: 25,
-      completed_tasks: 25,
-      duration: 180,
-      performer_count: 3,
-      created_at: '2024-01-15T08:00:00Z'
-    },
-    {
-      id: '2',
-      date: '2024-01-14',
-      status: 'incomplete',
-      total_tasks: 25,
-      completed_tasks: 22,
-      duration: 160,
-      performer_count: 2,
-      created_at: '2024-01-14T08:15:00Z'
-    },
-    {
-      id: '3',
-      date: '2024-01-13',
-      status: 'completed',
-      total_tasks: 24,
-      completed_tasks: 24,
-      duration: 175,
-      performer_count: 3,
-      created_at: '2024-01-13T08:30:00Z'
-    }
-  ]);
-
   // Computed
-  readonly completedCount = computed(() => 
-    this.mockSessions().filter(s => s.status === 'completed').length
+  readonly completedCount = computed(() =>
+    this.sessions().filter(s => s.status === 'completee').length
   );
 
   readonly successRate = computed(() => {
-    const sessions = this.mockSessions();
+    const sessions = this.sessions();
     if (sessions.length === 0) return 0;
     return Math.round((this.completedCount() / sessions.length) * 100);
   });
 
   readonly averageDuration = computed(() => {
-    const sessions = this.mockSessions().filter(s => s.duration);
+    const sessions = this.sessions().filter(s => s.duration);
     if (sessions.length === 0) return 0;
     const total = sessions.reduce((sum, s) => sum + (s.duration || 0), 0);
     return Math.round(total / sessions.length);
   });
 
   readonly filteredSessions = computed(() => {
-    let sessions = this.mockSessions();
+    let sessions = this.sessions();
     const currentFilters = this.filters();
 
     if (currentFilters.status !== 'all') {
-      sessions = sessions.filter(s => s.status === currentFilters.status);
+      // Mapper les statuts frontend vers backend
+      const statusMapping = {
+        'completed': 'completee',
+        'incomplete': 'incomplete',
+        'in_progress': 'en_cours'
+      };
+      const backendStatus = statusMapping[currentFilters.status as keyof typeof statusMapping];
+      sessions = sessions.filter(s => s.status === backendStatus);
     }
 
     // TODO: Implémenter le filtrage par période
 
     return sessions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   });
+
+  async ngOnInit() {
+    await this.loadSessions();
+  }
+
+  /**
+   * Charge les sessions depuis l'API
+   */
+  async loadSessions(): Promise<void> {
+    this.isLoading.set(true);
+    try {
+      const sessionsData = await this.apiService.getSessions();
+
+      // Filtrer pour ne garder que les sessions terminées des jours précédents
+      const pastSessions = (sessionsData || []).filter(session => {
+        const sessionDate = new Date(session.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        sessionDate.setHours(0, 0, 0, 0);
+
+        return sessionDate < today ||
+               (sessionDate.getTime() === today.getTime() &&
+                (session.status === 'completee' || session.status === 'incomplete'));
+      });
+
+      // Enrichir avec les statistiques réelles via l'API
+      const enrichedSessions: HistorySessionWithStats[] = await Promise.all(
+        pastSessions.map(async (session) => {
+          try {
+            const stats = await this.apiService.getSessionStatistics(session.id);
+
+            return {
+              ...session,
+              total_tasks: stats.total_tasks || 0,
+              completed_tasks: stats.completed_tasks || 0,
+              duration: Math.round(stats.average_duration_minutes || 0),
+              performer_count: stats.top_performers?.length || 0
+            };
+          } catch (error) {
+            console.warn(`Impossible de récupérer les stats pour la session ${session.id}:`, error);
+            // Fallback avec des valeurs par défaut
+            return {
+              ...session,
+              total_tasks: 0,
+              completed_tasks: 0,
+              duration: 0,
+              performer_count: 0
+            };
+          }
+        })
+      );
+
+      this.sessions.set(enrichedSessions);
+    } catch (error) {
+      console.error('Erreur lors du chargement des sessions:', error);
+      this.sessions.set([]);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
 
   /**
    * Gestion des filtres
@@ -358,9 +406,13 @@ export class SessionHistoryComponent {
     console.log('Export historique');
   }
 
-  downloadReport(sessionId: string): void {
-    // TODO: Implémenter le téléchargement
-    console.log('Download report:', sessionId);
+  async downloadReport(sessionId: string): Promise<void> {
+    try {
+      await this.apiService.exportSessionToPdf(sessionId);
+    } catch (error) {
+      console.error('Erreur lors du téléchargement du rapport:', error);
+      alert('Erreur lors du téléchargement du rapport PDF');
+    }
   }
 
   /**
@@ -383,23 +435,23 @@ export class SessionHistoryComponent {
 
   getStatusLabel(status: string): string {
     const labels = {
-      completed: 'Terminée',
-      incomplete: 'Incomplète',
-      in_progress: 'En cours'
+      'completee': 'Terminée',
+      'incomplete': 'Incomplète',
+      'en_cours': 'En cours'
     };
     return labels[status as keyof typeof labels] || status;
   }
 
   getStatusBadgeClass(status: string): string {
     const classes = {
-      completed: 'badge-success',
-      incomplete: 'badge-warning',
-      in_progress: 'badge-primary'
+      'completee': 'badge-success',
+      'incomplete': 'badge-warning',
+      'en_cours': 'badge-primary'
     };
     return classes[status as keyof typeof classes] || 'badge-gray';
   }
 
-  getProgressPercentage(session: HistorySession): number {
+  getProgressPercentage(session: HistorySessionWithStats): number {
     return session.total_tasks > 0 
       ? (session.completed_tasks / session.total_tasks) * 100 
       : 0;

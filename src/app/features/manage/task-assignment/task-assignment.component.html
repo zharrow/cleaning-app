@@ -1,0 +1,431 @@
+<div class="page-container">
+
+  <!-- En-tête -->
+  <div class="page-header">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div>
+        <h1 class="page-title">Assignation des tâches</h1>
+        <p class="page-subtitle">
+          Assignez des tâches spécifiques aux pièces et définissez leur planification
+        </p>
+      </div>
+
+      <!-- Actions principales -->
+      <div class="flex items-center gap-3">
+        <button
+          class="btn btn-primary"
+          (click)="openAssignmentModal('create')"
+        >
+          <span class="text-lg">📌</span>
+          Nouvelle assignation
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistiques rapides
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="card">
+      <div class="card-body">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-600">Total assigné</p>
+            <p class="text-2xl font-bold text-gray-900">{{ assignedTasks().length }}</p>
+          </div>
+          <span class="text-3xl">📌</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-600">Tâches quotidiennes</p>
+            <p class="text-2xl font-bold text-gray-900">{{ dailyTasksCount() }}</p>
+          </div>
+          <span class="text-3xl">📅</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-600">Pièces couvertes</p>
+            <p class="text-2xl font-bold text-gray-900">{{ coveredRoomsCount() }}</p>
+          </div>
+          <span class="text-3xl">🏠</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-600">Non assignées</p>
+            <p class="text-2xl font-bold text-gray-900">{{ unassignedTasksCount() }}</p>
+          </div>
+          <span class="text-3xl">⚠️</span>
+        </div>
+      </div>
+    </div>
+  </div> -->
+
+  <!-- Filtres -->
+  <div class="card mb-6">
+    <div class="card-body">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div>
+          <label class="form-label text-sm">Pièce</label>
+          <select
+            class="form-input form-select"
+            [value]="filters().room"
+            (change)="updateFilter('room', $event)"
+          >
+            <option value="">Toutes les pièces</option>
+            @for (room of rooms(); track room.id) {
+              <option [value]="room.id">{{ room.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div>
+          <label class="form-label text-sm">Catégorie</label>
+          <select
+            class="form-input form-select"
+            [value]="filters().category"
+            (change)="updateFilter('category', $event)"
+          >
+            <option value="">Toutes les catégories</option>
+            @for (category of availableCategories(); track category) {
+              <option [value]="category">{{ category }}</option>
+            }
+          </select>
+        </div>
+
+        <div>
+          <label class="form-label text-sm">Fréquence</label>
+          <select
+            class="form-input form-select"
+            [value]="filters().frequency"
+            (change)="updateFilter('frequency', $event)"
+          >
+            <option value="">Toutes les fréquences</option>
+            <option value="daily">Quotidien</option>
+            <option value="weekly">Hebdomadaire</option>
+            <option value="monthly">Mensuel</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="form-label text-sm">Exécutant</label>
+          <select
+            class="form-input form-select"
+            [value]="filters().performer"
+            (change)="updateFilter('performer', $event)"
+          >
+            <option value="">Tous les exécutants</option>
+            @for (performer of availablePerformers(); track performer.id) {
+              <option [value]="performer.id">{{ performer.name }}</option>
+            }
+            <option value="unassigned">Non assigné</option>
+          </select>
+        </div>
+
+        <div class="flex items-end">
+          <button
+            class="btn btn-secondary"
+            (click)="resetFilters()"
+          >
+            Reset filtres
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tableau des assignations -->
+  @if (isLoading()) {
+    <div class="card">
+      <div class="card-body">
+        <div class="space-y-4">
+          @for (i of [1,2,3,4,5]; track i) {
+            <div class="skeleton skeleton-text"></div>
+          }
+        </div>
+      </div>
+    </div>
+  } @else if (filteredAssignments().length > 0) {
+    <div class="card">
+      <div class="overflow-x-auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Tâche</th>
+              <th>Pièce</th>
+              <th>Fréquence</th>
+              <th>Heure suggérée</th>
+              <th>Exécutant par défaut</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (assignment of filteredAssignments(); track assignment.id) {
+              <tr>
+                <td>
+                  <div>
+                    <p class="font-medium text-gray-900">
+                      {{ assignment.task_template.name }}
+                    </p>
+                    <p class="text-sm text-gray-600">
+                      {{ assignment.task_template.category }}
+                    </p>
+                    <div class="text-xs text-gray-500 mt-1">
+                      ⏱️ {{ assignment.task_template.estimated_duration }}min
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="font-medium text-gray-900">
+                    {{ assignment.room.name }}
+                  </span>
+                </td>
+                <td>
+                  <div>
+                    <span
+                      class="badge"
+                      [class]="getFrequencyBadgeClass(assignment.frequency_days.type)"
+                    >
+                      {{ getFrequencyLabel(assignment.frequency_days.type) }}
+                    </span>
+                    @if (assignment.times_per_day > 1) {
+                      <div class="text-xs text-gray-500 mt-1">
+                        {{ assignment.times_per_day }}x par jour
+                      </div>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <span class="text-gray-600">
+                    {{ assignment.suggested_time || '-' }}
+                  </span>
+                </td>
+                <td>
+                  @if (assignment.default_performer) {
+                    <span class="text-gray-900">
+                      {{ assignment.default_performer.name }}
+                    </span>
+                  } @else {
+                    <span class="text-gray-500 italic">Non assigné</span>
+                  }
+                </td>
+                <td>
+                  <span
+                    class="badge"
+                    [class]="assignment.is_active ? 'badge-success' : 'badge-gray'"
+                  >
+                    {{ assignment.is_active ? 'Actif' : 'Inactif' }}
+                  </span>
+                </td>
+                <td>
+                  <div class="flex items-center gap-2">
+                    <button
+                      class="btn btn-ghost btn-sm"
+                      (click)="editAssignment(assignment)"
+                      title="Modifier"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      class="btn btn-ghost btn-sm"
+                      (click)="toggleAssignmentStatus(assignment)"
+                      [disabled]="togglingStatus().has(assignment.id)"
+                      [title]="assignment.is_active ? 'Désactiver' : 'Activer'"
+                    >
+                      @if (togglingStatus().has(assignment.id)) {
+                        <div class="spinner spinner-sm"></div>
+                      } @else {
+                        {{ assignment.is_active ? '⏸️' : '▶️' }}
+                      }
+                    </button>
+                    <button
+                      class="btn btn-ghost btn-sm text-danger-600"
+                      (click)="openDeleteModal(assignment)"
+                      title="Supprimer"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  } @else {
+    <div class="card">
+      <div class="card-body text-center py-12">
+        <span class="text-6xl mb-4 block">📌</span>
+        <h3 class="text-xl font-medium text-gray-900 mb-2">
+          @if (hasActiveFilters()) {
+            Aucune assignation trouvée
+          } @else {
+            Aucune tâche assignée
+          }
+        </h3>
+        <p class="text-gray-600 mb-4">
+          @if (hasActiveFilters()) {
+            Aucune assignation ne correspond aux filtres sélectionnés.
+          } @else {
+            Commencez par assigner des tâches aux pièces pour organiser le nettoyage.
+          }
+        </p>
+        @if (hasActiveFilters()) {
+          <button
+            class="btn btn-secondary mr-3"
+            (click)="resetFilters()"
+          >
+            Reset filtres
+          </button>
+        }
+        <button
+          class="btn btn-primary"
+          (click)="openAssignmentModal('create')"
+        >
+          Nouvelle assignation
+        </button>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Modal Assignation -->
+@if (assignmentModal().isOpen) {
+  <div class="modal-overlay" (click)="closeAssignmentModal()">
+    <div class="modal-content" style="width: 800px; max-width: 90vw;" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          @if (assignmentModal().mode === 'create') {
+            Nouvelle assignation de tâche
+          } @else {
+            Modifier l'assignation
+          }
+        </h3>
+        <button class="modal-close" (click)="closeAssignmentModal()">✕</button>
+      </div>
+
+      <form [formGroup]="assignmentForm" (ngSubmit)="saveAssignment()">
+        <div class="modal-body">
+          <div class="space-y-4">
+
+            <div class="form-group">
+              <label class="form-label required">Pièce</label>
+              <select class="form-input form-select" formControlName="room_id">
+                <option value="">Sélectionner une pièce</option>
+                @for (room of rooms(); track room.id) {
+                  <option [value]="room.id">{{ room.name }}</option>
+                }
+              </select>
+              @if (assignmentForm.get('room_id')?.invalid && assignmentForm.get('room_id')?.touched) {
+                <div class="form-error">Veuillez sélectionner une pièce</div>
+              }
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required">Tâche</label>
+              <select class="form-input form-select" formControlName="task_template_id">
+                <option value="">Sélectionner une tâche</option>
+                @for (template of taskTemplates(); track template.id) {
+                  <option [value]="template.id">
+                    {{ template.name }} ({{ template.category }})
+                  </option>
+                }
+              </select>
+              @if (assignmentForm.get('task_template_id')?.invalid && assignmentForm.get('task_template_id')?.touched) {
+                <div class="form-error">Veuillez sélectionner une tâche</div>
+              }
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div class="form-group">
+                <label class="form-label required">Fréquence</label>
+                <select class="form-input form-select" formControlName="frequency_type">
+                  <option value="daily">Quotidien</option>
+                  <option value="weekly">Hebdomadaire</option>
+                  <option value="monthly">Mensuel</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Fois par jour</label>
+                <input
+                  type="number"
+                  class="form-input"
+                  formControlName="times_per_day"
+                  min="1"
+                  max="10"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Heure suggérée</label>
+              <input
+                type="time"
+                class="form-input"
+                formControlName="suggested_time"
+              />
+              <p class="form-help">Heure recommandée pour effectuer cette tâche</p>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Exécutant par défaut</label>
+              <select class="form-input form-select" formControlName="default_performer_id">
+                <option value="">Aucun exécutant spécifique</option>
+                @for (performer of availablePerformers(); track performer.id) {
+                  <option [value]="performer.id">{{ performer.name }}</option>
+                }
+              </select>
+              <p class="form-help">Personne qui effectuera cette tâche par défaut (optionnel)</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            (click)="closeAssignmentModal()"
+            [disabled]="savingAssignment()"
+          >
+            Annuler
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="assignmentForm.invalid || savingAssignment()"
+          >
+            @if (savingAssignment()) {
+              <div class="spinner spinner-sm"></div>
+            }
+            {{ assignmentModal().mode === 'create' ? 'Assigner' : 'Sauvegarder' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- Modal de confirmation de suppression -->
+<app-confirmation-modal
+  [isOpen]="deleteModal().isOpen"
+  [isLoading]="deleteModal().isLoading"
+  [config]="deleteConfig()"
+  (confirm)="confirmDelete()"
+  (cancel)="closeDeleteModal()"
+/>

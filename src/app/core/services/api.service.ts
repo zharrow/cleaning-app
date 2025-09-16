@@ -71,7 +71,7 @@ export interface AssignedTask {
 export interface CleaningSession {
   readonly id: string;
   readonly date: string;
-  readonly status: 'pending' | 'in_progress' | 'completed' | 'incomplete';
+  readonly status: 'en_cours' | 'completee' | 'incomplete';
   readonly total_tasks: number;
   readonly completed_tasks: number;
   readonly created_at: string;
@@ -129,6 +129,15 @@ export interface TodayTaskStatus {
   photos?: string[];
   started_at?: string;
   completed_at?: string;
+}
+
+/**
+ * Options pour l'export PDF
+ */
+export interface PdfExportOptions {
+  includePhotos?: boolean;
+  maxPhotos?: number;
+  formatType?: 'standard' | 'summary' | 'detailed';
 }
 
 /**
@@ -583,8 +592,8 @@ export class ApiService {
   async updateAssignedTask(id: string, updates: any): Promise<AssignedTask> {
     const token = await this.authService.getToken();
     if (!token) throw new Error('Non authentifié');
-    
-    const response = await this.httpPatch<AssignedTask>(`/assigned-tasks/${id}`, updates, {
+
+    const response = await this.httpPut<AssignedTask>(`/assigned-tasks/${id}`, updates, {
       headers: { Authorization: `Bearer ${token}` }
     });
     
@@ -641,18 +650,26 @@ export class ApiService {
   /**
    * Upload d'une photo
    */
-  async uploadPhoto(file: File): Promise<string> {
+  async uploadPhoto(file: File, taskId?: string, sessionId?: string): Promise<string> {
     const token = await this.authService.getToken();
     if (!token) throw new Error('Non authentifié');
     
     const formData = new FormData();
-    formData.append('photo', file);
+    formData.append('file', file);  // ✅ CORRIGÉ: 'file' au lieu de 'photo'
     
-    const response = await this.httpPost<{ url: string }>('/uploads/photo', formData, {
+    // Ajouter les paramètres optionnels
+    if (taskId) {
+      formData.append('task_id', taskId);
+    }
+    if (sessionId) {
+      formData.append('session_id', sessionId);
+    }
+    
+    const response = await this.httpPost<{ photo_url: string }>('/uploads/photo', formData, {
       headers: { Authorization: `Bearer ${token}` }
     });
     
-    return response.url;
+    return response.photo_url;  // ✅ CORRIGÉ: réponse conforme au schéma backend
   }
   
   /**
@@ -806,12 +823,26 @@ export class ApiService {
   }
 
   /**
-   * Exporte une session en PDF
+   * Exporte une session en PDF avec options personnalisables
    */
-  async exportSessionToPdf(sessionId: string): Promise<void> {
+  async exportSessionToPdf(sessionId: string, options: PdfExportOptions = {}): Promise<void> {
     const token = await this.getAuthToken();
-    
-    const response = await fetch(`${environment.apiUrl}/exports/pdf/${sessionId}`, {
+
+    // Options par défaut
+    const {
+      includePhotos = true,
+      maxPhotos = 10,
+      formatType = 'standard'
+    } = options;
+
+    // Construire l'URL avec les paramètres
+    const params = new URLSearchParams({
+      include_photos: includePhotos.toString(),
+      max_photos: maxPhotos.toString(),
+      format_type: formatType
+    });
+
+    const response = await fetch(`${environment.apiUrl}/exports/pdf/${sessionId}/download?${params}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -980,5 +1011,54 @@ export class ApiService {
       console.error(`DELETE ${endpoint} failed:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Récupère toutes les sessions
+   */
+  async getSessions(limit?: number): Promise<CleaningSession[]> {
+    const token = await this.getAuthToken();
+    if (!token) throw new Error('Token non disponible');
+
+    const url = limit ? `/sessions?limit=${limit}` : '/sessions';
+    return this.httpGet<CleaningSession[]>(url, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  }
+
+  /**
+   * Récupère les statistiques d'une session
+   */
+  async getSessionStatistics(sessionId: string): Promise<any> {
+    const token = await this.getAuthToken();
+    if (!token) throw new Error('Token non disponible');
+
+    return this.httpGet<any>(`/sessions/${sessionId}/statistics`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  }
+
+  /**
+   * Récupère une session spécifique
+   */
+  async getSession(sessionId: string): Promise<CleaningSession> {
+    const token = await this.getAuthToken();
+    if (!token) throw new Error('Token non disponible');
+
+    return this.httpGet<CleaningSession>(`/sessions/${sessionId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  }
+
+  /**
+   * Récupère les logs d'une session
+   */
+  async getSessionLogs(sessionId: string): Promise<CleaningLog[]> {
+    const token = await this.getAuthToken();
+    if (!token) throw new Error('Token non disponible');
+
+    return this.httpGet<CleaningLog[]>(`/sessions/${sessionId}/logs`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
   }
 }

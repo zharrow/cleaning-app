@@ -246,10 +246,23 @@
   transition: all var(--transition-fast);
 }
 
+/* Override pour les inputs glassmorphism */
+.form-input.form-glass {
+  background: var(--glass-form-focus) !important;
+  color: var(--text-on-glass) !important;
+  border: var(--glass-border-strong) !important;
+}
+
 .form-input:focus {
   outline: none;
   border-color: var(--color-border-focus);
   box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+}
+
+/* Override pour les inputs glassmorphism au focus */
+.form-input.form-glass:focus {
+  border: 1px solid rgba(135, 206, 235, 0.8) !important;
+  box-shadow: var(--glass-shadow), 0 0 0 2px rgba(135, 206, 235, 0.3) !important;
 }
 
 .form-input:disabled {
@@ -515,6 +528,126 @@
 }
 
 /* ===================
+   Glassmorphism Components
+   =================== */
+
+/* Conteneurs glassmorphism */
+.glass {
+  background: var(--glass-white);
+  backdrop-filter: var(--backdrop-blur-lg);
+  -webkit-backdrop-filter: var(--backdrop-blur-lg);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow-xl);
+  border-radius: var(--border-radius-xl);
+  transition: all var(--transition-base);
+  position: relative;
+}
+
+.glass::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  border-radius: var(--border-radius-xl) var(--border-radius-xl) 0 0;
+}
+
+.glass-strong {
+  background: var(--glass-white-strong);
+  backdrop-filter: var(--backdrop-blur-xl);
+  -webkit-backdrop-filter: var(--backdrop-blur-xl);
+  border: var(--glass-border-strong);
+  box-shadow: var(--glass-shadow-xl);
+}
+
+.glass-dark {
+  background: var(--glass-dark);
+  backdrop-filter: var(--backdrop-blur-md);
+  -webkit-backdrop-filter: var(--backdrop-blur-md);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Removed hover effect on main glass container */
+
+/* Orbs décoratifs */
+.orb {
+  border-radius: 50%;
+  filter: blur(40px);
+  pointer-events: none;
+  animation: float 6s ease-in-out infinite;
+}
+
+.orb-primary {
+  background: var(--gradient-primary);
+}
+
+.orb-secondary {
+  background: var(--gradient-secondary);
+}
+
+/* Dégradés de texte */
+.text-gradient-accent {
+  background: var(--gradient-accent);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: var(--font-weight-bold);
+}
+
+/* Dégradés de background */
+.bg-gradient-dark {
+  background: var(--gradient-dark);
+}
+
+/* Formulaires glassmorphism améliorés */
+.form-glass {
+  background: var(--glass-form-focus);
+  backdrop-filter: var(--backdrop-blur-lg);
+  -webkit-backdrop-filter: var(--backdrop-blur-lg);
+  border: var(--glass-border-strong);
+  border-radius: var(--input-border-radius);
+  transition: all var(--transition-base);
+  color: var(--text-on-glass);
+  box-shadow: var(--glass-shadow);
+}
+
+.form-glass::placeholder {
+  color: var(--text-on-glass-subtle);
+}
+
+.form-glass:focus {
+  background: var(--glass-form-focus);
+  backdrop-filter: var(--backdrop-blur-lg);
+  -webkit-backdrop-filter: var(--backdrop-blur-lg);
+  border: 1px solid rgba(135, 206, 235, 0.8);
+  box-shadow: var(--glass-shadow), 0 0 0 2px rgba(135, 206, 235, 0.3);
+  outline: none;
+}
+
+.form-glass.error {
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  background: rgba(239, 68, 68, 0.1);
+  box-shadow: var(--glass-shadow), 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+.form-glass.success {
+  border: 1px solid rgba(34, 197, 94, 0.6);
+  background: rgba(34, 197, 94, 0.1);
+  box-shadow: var(--glass-shadow), 0 0 0 2px rgba(34, 197, 94, 0.2);
+}
+
+/* Messages de validation */
+.form-success {
+  font-size: var(--font-size-sm);
+  color: var(--color-success-600);
+  margin-top: var(--spacing-1);
+  display: flex;
+  align-items: center;
+}
+
+/* ===================
    Modales et Overlays
    =================== */
 
@@ -656,4 +789,70 @@
 
 .status-partial .status-dot {
   background-color: var(--status-partial);
+}
+
+/* ===================
+   Background créatif style Awwwards
+   =================== */
+
+.creative-background {
+  position: relative;
+  background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 50%, #16213e 100%);
+}
+
+.creative-background::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 25% 25%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(255, 119, 198, 0.2) 0%, transparent 50%);
+  z-index: 1;
+}
+
+.creative-background::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  z-index: 2;
+}
+
+/* Background simplifié avec blob unique */
+.simple-blob-background {
+  position: relative;
+  background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 50%, #16213e 100%);
+}
+
+/* Effets de hover subtils sur les inputs */
+.form-glass:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--glass-shadow), 0 0 0 1px rgba(135, 206, 235, 0.2);
+}
+
+/* Animations de validité en temps réel */
+.form-glass.success {
+  animation: success-glow 0.5s ease-in-out;
+}
+
+.form-glass.error {
+  animation: error-shake 0.5s ease-in-out;
+}
+
+@keyframes success-glow {
+  0% { box-shadow: var(--glass-shadow); }
+  50% { box-shadow: var(--glass-shadow), 0 0 20px rgba(34, 197, 94, 0.3); }
+  100% { box-shadow: var(--glass-shadow), 0 0 0 3px rgba(34, 197, 94, 0.1); }
+}
+
+@keyframes error-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
 }

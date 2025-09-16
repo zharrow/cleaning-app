@@ -120,12 +120,20 @@ export const routes: Routes = [
             pathMatch: 'full'
           },
 
-          // Gestion des tâches (admin)
+          // Gestion des modèles de tâches (admin)
           {
             path: 'tasks',
             loadComponent: () => import('./features/manage/manage-tasks/manage-tasks.component')
               .then(m => m.ManageTasksComponent),
-            title: 'Gestion des tâches - Micro-Crèche'
+            title: 'Tâches - Micro-Crèche'
+          },
+
+          // Assignation des tâches (admin)
+          {
+            path: 'assign-tasks',
+            loadComponent: () => import('./features/manage/task-assignment/task-assignment.component')
+              .then(m => m.TaskAssignmentComponent),
+            title: 'Assignation des tâches - Micro-Crèche'
           },
 
           // Gestion des pièces
@@ -133,7 +141,7 @@ export const routes: Routes = [
             path: 'rooms',
             loadComponent: () => import('./features/manage/manage-rooms/manage-rooms.component')
               .then(m => m.ManageRoomsComponent),
-            title: 'Gestion des pièces - Micro-Crèche'
+            title: 'Pièces - Micro-Crèche'
           },
 
           // Gestion des intervenants
@@ -141,7 +149,7 @@ export const routes: Routes = [
             path: 'performers',
             loadComponent: () => import('./features/manage/manage-performers/manage-performers.component')
               .then(m => m.ManagePerformersComponent),
-            title: 'Gestion des intervenants - Micro-Crèche'
+            title: 'Intervenants - Micro-Crèche'
           },
 
           // Gestion des utilisateurs (admin seulement)

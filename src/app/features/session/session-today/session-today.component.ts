@@ -58,7 +58,7 @@ interface TaskValidationModal {
     <div class="page-container">
       
       <!-- Bannière d'alerte session active -->
-      @if (currentSession()?.status === 'in_progress') {
+      @if (currentSession()?.status === 'en_cours') {
         <div class="session-active-banner animate-fade-in">
           <div class="flex items-center justify-center gap-3">
             <div class="session-pulse"></div>
@@ -79,7 +79,7 @@ interface TaskValidationModal {
                 <h1 class="page-title">
                   Session du {{ formatDate(session.date) }}
                 </h1>
-                @if (session.status === 'in_progress') {
+                @if (session.status === 'en_cours') {
                   <div class="status-indicator status-active" title="Session active">
                     <div class="status-dot"></div>
                     <span class="status-text">ACTIVE</span>
@@ -1063,22 +1063,20 @@ export class SessionTodayComponent {
 
   getSessionStatusClass(status: CleaningSession['status']): string {
     const classes = {
-      pending: 'badge-gray',
-      in_progress: 'badge-primary',
-      completed: 'badge-success',
+      en_cours: 'badge-primary',
+      completee: 'badge-success',
       incomplete: 'badge-warning'
     };
-    return classes[status] || 'badge-gray';
+    return classes[status as keyof typeof classes] || 'badge-gray';
   }
 
   getSessionStatusLabel(status: CleaningSession['status']): string {
     const labels = {
-      pending: 'En attente',
-      in_progress: 'En cours',
-      completed: 'Terminée',
+      en_cours: 'En cours',
+      completee: 'Terminée',
       incomplete: 'Incomplète'
     };
-    return labels[status] || status;
+    return labels[status as keyof typeof labels] || status;
   }
 
   getStatusColor(status: CleaningLog['status']): string {
