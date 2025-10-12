@@ -50,44 +50,6 @@ interface PerformerModal {
         </div>
       </div>
 
-      <!-- Statistiques globales -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="card">
-          <div class="card-body">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm text-gray-600">Total intervenants</p>
-                <p class="text-2xl font-bold text-gray-900">{{ taskService.performers().length }}</p>
-              </div>
-              <span class="text-3xl">👤</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="card">
-          <div class="card-body">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm text-gray-600">Actifs</p>
-                <p class="text-2xl font-bold text-gray-900">{{ activePerformersCount() }}</p>
-              </div>
-              <span class="text-3xl">✅</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="card">
-          <div class="card-body">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm text-gray-600">Inactifs</p>
-                <p class="text-2xl font-bold text-gray-900">{{ inactivePerformersCount() }}</p>
-              </div>
-              <span class="text-3xl">❌</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <!-- Liste des intervenants -->
       @if (taskService.isLoading()) {
@@ -186,7 +148,7 @@ interface PerformerModal {
                           
                           <div class="border-t my-1"></div>
                           
-                          <button 
+                          <button
                             class="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-700 hover:bg-red-50 transition-colors"
                             (click)="openDeletePerformerModal(performer)"
                           >
@@ -437,10 +399,10 @@ export class ManagePerformersComponent implements OnInit {
   readonly deletePerformerConfig = computed(() => {
     const modal = this.deletePerformerModal();
     const performer = modal.performer;
-    
+
     return {
-      title: 'Supprimer l\'intervenant',
-      message: `Êtes-vous sûr de vouloir supprimer définitivement l'intervenant "${performer?.name || ''}" ?\n\nCette action est irréversible et supprimera toutes les données associées.`,
+      title: 'Supprimer définitivement l\'intervenant',
+      message: `Êtes-vous sûr de vouloir supprimer définitivement l'intervenant "${performer?.name || ''}" ?\n\nCette action est irréversible et supprimera toutes les données associées. Cette action n'est possible que si l'intervenant n'est référencé dans aucune tâche ou historique.`,
       confirmText: 'Supprimer définitivement',
       cancelText: 'Annuler',
       type: 'danger' as const,
@@ -531,6 +493,7 @@ export class ManagePerformersComponent implements OnInit {
   // Gestion des modales de confirmation
   // ===================
 
+
   openDeletePerformerModal(performer: Performer): void {
     this.deletePerformerModal.set({
       isOpen: true,
@@ -577,6 +540,7 @@ export class ManagePerformersComponent implements OnInit {
     this.openDeactivatePerformerModal(performer);
   }
 
+
   async confirmDeletePerformer(): Promise<void> {
     const modal = this.deletePerformerModal();
     if (!modal.performer) return;
@@ -584,14 +548,29 @@ export class ManagePerformersComponent implements OnInit {
     this.deletePerformerModal.update(m => ({ ...m, isLoading: true }));
 
     try {
-      console.log('🗑️ Suppression de l\'intervenant:', modal.performer.id);
-      await this.taskService.deletePerformer(modal.performer.id);
-      console.log('✅ Intervenant supprimé avec succès');
+      console.log('🗑️ Suppression définitive de l\'intervenant:', modal.performer.id);
+      await this.taskService.deletePerformerPermanently(modal.performer.id);
+      console.log('✅ Intervenant supprimé définitivement avec succès');
       this.closeDeletePerformerModal();
     } catch (error) {
-      console.error('❌ Erreur lors de la suppression de l\'intervenant:', error);
+      console.error('❌ Erreur lors de la suppression définitive de l\'intervenant:', error);
       this.deletePerformerModal.update(m => ({ ...m, isLoading: false }));
-      alert('Erreur lors de la suppression de l\'intervenant');
+
+      // Gestion spécifique des erreurs de contraintes
+      let errorMessage = 'Erreur lors de la suppression définitive de l\'intervenant';
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (error && typeof error === 'object' && 'error' in error) {
+        errorMessage = (error as any).error?.detail || errorMessage;
+      }
+
+      // Améliorer le message pour les contraintes
+      if (errorMessage.includes('assigned tasks') || errorMessage.includes('cleaning logs')) {
+        errorMessage = `❌ Impossible de supprimer cet intervenant :\n\n${errorMessage}\n\n💡 Solution : Utilisez "Désactiver" pour le masquer temporairement, ou réassignez ses tâches à un autre intervenant.`;
+      }
+
+      alert(errorMessage);
     }
   }
 

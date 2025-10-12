@@ -258,16 +258,30 @@ export class TaskService {
     }
   }
 
-  async deletePerformer(id: string): Promise<void> {
+  async hidePerformer(id: string): Promise<void> {
     try {
-      await this.api.deletePerformer(id);
-      
-      // Retirer de la liste locale
+      await this.api.hidePerformer(id);
+
+      // Retirer de la liste locale (soft delete)
       const currentPerformers = this.performers();
       const filteredPerformers = currentPerformers.filter(p => p.id !== id);
       this.performers.set(filteredPerformers);
     } catch (error) {
-      console.error('Erreur lors de la suppression du performer:', error);
+      console.error('Erreur lors du masquage du performer:', error);
+      throw error;
+    }
+  }
+
+  async deletePerformerPermanently(id: string): Promise<void> {
+    try {
+      await this.api.deletePerformerPermanently(id);
+
+      // Retirer de la liste locale (hard delete)
+      const currentPerformers = this.performers();
+      const filteredPerformers = currentPerformers.filter(p => p.id !== id);
+      this.performers.set(filteredPerformers);
+    } catch (error) {
+      console.error('Erreur lors de la suppression définitive du performer:', error);
       throw error;
     }
   }

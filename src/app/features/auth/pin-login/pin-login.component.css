@@ -1,0 +1,175 @@
+.pin-login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-700) 100%);
+  padding: 1rem;
+}
+
+.pin-login-card {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  padding: 2rem;
+  max-width: 400px;
+  width: 100%;
+}
+
+.pin-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.back-button {
+  position: absolute;
+  top: -1rem;
+  left: -1rem;
+  background: transparent;
+  border: 1px solid var(--neutral-300);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--neutral-700);
+  transition: all 0.2s;
+}
+
+.back-button:hover:not(:disabled) {
+  background: var(--neutral-100);
+}
+
+.pin-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--neutral-900);
+  margin: 0 0 0.5rem 0;
+}
+
+.enterprise-name {
+  font-size: 1rem;
+  color: var(--primary-600);
+  margin: 0;
+}
+
+.pin-display {
+  background: var(--neutral-50);
+  border: 2px solid var(--neutral-200);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pin-dots {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--neutral-800);
+  letter-spacing: 0.5rem;
+}
+
+.error-message {
+  background: var(--error-50);
+  border: 1px solid var(--error-200);
+  color: var(--error-700);
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.keypad-button {
+  aspect-ratio: 1;
+  background: white;
+  border: 2px solid var(--neutral-200);
+  border-radius: 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 60px;
+}
+
+.keypad-button:hover:not(:disabled) {
+  background: var(--primary-50);
+  border-color: var(--primary-300);
+  transform: translateY(-2px);
+}
+
+.keypad-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.action-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.action-btn {
+  padding: 0.875rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  font-size: 0.875rem;
+}
+
+.clear-btn {
+  background: var(--neutral-100);
+  color: var(--neutral-700);
+}
+
+.backspace-btn {
+  background: var(--warning-100);
+  color: var(--warning-700);
+  font-size: 1.25rem;
+}
+
+.submit-btn {
+  background: var(--success-500);
+  color: white;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: var(--success-600);
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.helper-text {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--neutral-500);
+}

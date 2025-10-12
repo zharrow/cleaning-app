@@ -1,0 +1,383 @@
+<div class="page-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Gestion des Employés</h1>
+      <p class="page-subtitle">Gérez les comptes employés et leurs accès aux salles</p>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateModal()">
+      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+      </svg>
+      Nouvel Employé
+    </button>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="stats-card">
+      <div class="stats-icon bg-success-100 text-success-600">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      </div>
+      <div class="stats-content">
+        <div class="stats-value">{{ activeEmployeesCount() }}</div>
+        <div class="stats-label">Actifs</div>
+      </div>
+    </div>
+
+    <div class="stats-card">
+      <div class="stats-icon bg-warning-100 text-warning-600">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+        </svg>
+      </div>
+      <div class="stats-content">
+        <div class="stats-value">{{ inactiveEmployeesCount() }}</div>
+        <div class="stats-label">Inactifs</div>
+      </div>
+    </div>
+
+    <div class="stats-card">
+      <div class="stats-icon bg-primary-100 text-primary-600">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      </div>
+      <div class="stats-content">
+        <div class="stats-value">{{ employees().length }}</div>
+        <div class="stats-label">Total</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card mb-6">
+    <div class="flex flex-col md:flex-row gap-4">
+      <!-- Search -->
+      <div class="flex-1">
+        <input
+          type="text"
+          class="form-input"
+          placeholder="Rechercher par nom ou email..."
+          [value]="searchTerm()"
+          (input)="searchTerm.set($any($event.target).value)"
+        />
+      </div>
+
+      <!-- Status Filter -->
+      <div class="flex gap-2">
+        <button
+          class="btn btn-sm"
+          [class.btn-primary]="filterActive() === 'all'"
+          [class.btn-outline]="filterActive() !== 'all'"
+          (click)="filterActive.set('all')">
+          Tous
+        </button>
+        <button
+          class="btn btn-sm"
+          [class.btn-success]="filterActive() === 'active'"
+          [class.btn-outline]="filterActive() !== 'active'"
+          (click)="filterActive.set('active')">
+          Actifs
+        </button>
+        <button
+          class="btn btn-sm"
+          [class.btn-warning]="filterActive() === 'inactive'"
+          [class.btn-outline]="filterActive() !== 'inactive'"
+          (click)="filterActive.set('inactive')">
+          Inactifs
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="text-center py-12">
+      <div class="spinner spinner-lg mx-auto mb-4"></div>
+      <p class="text-muted">Chargement des employés...</p>
+    </div>
+  }
+
+  <!-- Employees Table -->
+  @else if (filteredEmployees().length > 0) {
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th>Email</th>
+              <th>Statut</th>
+              <th>Créé le</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (employee of filteredEmployees(); track employee.id) {
+              <tr>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div class="avatar bg-primary-100 text-primary-600">
+                      {{ employee.first_name.charAt(0) }}{{ employee.last_name.charAt(0) }}
+                    </div>
+                    <div>
+                      <div class="font-semibold">{{ employee.full_name }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  @if (employee.email) {
+                    <span class="text-sm text-secondary">{{ employee.email }}</span>
+                  } @else {
+                    <span class="text-sm text-muted">Non renseigné</span>
+                  }
+                </td>
+                <td>
+                  @if (employee.is_active) {
+                    <span class="badge badge-success">Actif</span>
+                  } @else {
+                    <span class="badge badge-warning">Inactif</span>
+                  }
+                </td>
+                <td>
+                  <span class="text-sm text-secondary">
+                    {{ employee.created_at | date:'dd/MM/yyyy' }}
+                  </span>
+                </td>
+                <td>
+                  <div class="flex items-center justify-end gap-2">
+                    <!-- Manage Rooms -->
+                    <button
+                      class="btn btn-sm btn-outline"
+                      (click)="openRoomsModal(employee)"
+                      title="Gérer les accès aux salles">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                    </button>
+
+                    <!-- Change PIN -->
+                    <button
+                      class="btn btn-sm btn-outline"
+                      (click)="openPinModal(employee)"
+                      title="Modifier le code PIN">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                      </svg>
+                    </button>
+
+                    <!-- Edit -->
+                    <button
+                      class="btn btn-sm btn-outline"
+                      (click)="openEditModal(employee)"
+                      title="Modifier">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+
+                    <!-- Toggle Active -->
+                    <button
+                      class="btn btn-sm"
+                      [class.btn-warning]="employee.is_active"
+                      [class.btn-success]="!employee.is_active"
+                      (click)="toggleActiveStatus(employee)"
+                      [title]="employee.is_active ? 'Désactiver' : 'Activer'">
+                      @if (employee.is_active) {
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                        </svg>
+                      } @else {
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      }
+                    </button>
+
+                    <!-- Delete -->
+                    <button
+                      class="btn btn-sm btn-danger"
+                      (click)="deleteEmployee(employee)"
+                      title="Supprimer définitivement">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- Empty State -->
+  @else {
+    <div class="card text-center py-12">
+      <svg class="w-16 h-16 mx-auto mb-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+      <h3 class="text-xl font-semibold mb-2">Aucun employé trouvé</h3>
+      <p class="text-muted mb-6">Commencez par créer votre premier employé</p>
+      <button class="btn btn-primary" (click)="openCreateModal()">
+        Créer un employé
+      </button>
+    </div>
+  }
+</div>
+
+<!-- Create/Edit Employee Modal -->
+@if (showModal()) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">{{ modalTitle() }}</h3>
+        <button class="modal-close" (click)="closeModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <form class="space-y-4">
+          <!-- First Name -->
+          <div class="form-group">
+            <label class="form-label">Prénom *</label>
+            <input
+              type="text"
+              class="form-input"
+              [value]="formData().first_name"
+              (input)="updateField('first_name', $any($event.target).value)"
+              required
+            />
+          </div>
+
+          <!-- Last Name -->
+          <div class="form-group">
+            <label class="form-label">Nom *</label>
+            <input
+              type="text"
+              class="form-input"
+              [value]="formData().last_name"
+              (input)="updateField('last_name', $any($event.target).value)"
+              required
+            />
+          </div>
+
+          <!-- Email -->
+          <div class="form-group">
+            <label class="form-label">Email (optionnel)</label>
+            <input
+              type="email"
+              class="form-input"
+              [value]="formData().email || ''"
+              (input)="updateField('email', $any($event.target).value)"
+            />
+          </div>
+
+          <!-- PIN Code -->
+          <div class="form-group">
+            <label class="form-label">
+              Code PIN (4-6 chiffres) {{ isEditMode() ? '(laisser vide pour ne pas modifier)' : '*' }}
+            </label>
+            <input
+              type="password"
+              class="form-input"
+              [value]="formData().pin_code"
+              (input)="updateField('pin_code', $any($event.target).value)"
+              minlength="4"
+              maxlength="6"
+              pattern="[0-9]*"
+              [required]="!isEditMode()"
+            />
+            <p class="form-hint">Le code PIN permet à l'employé de se connecter sur tablette</p>
+          </div>
+
+          <!-- Active Status -->
+          <div class="form-group">
+            <label class="flex items-center gap-2">
+              <input
+                type="checkbox"
+                class="form-checkbox"
+                [checked]="formData().is_active"
+                (change)="updateField('is_active', $any($event.target).checked)"
+              />
+              <span class="form-label mb-0">Compte actif</span>
+            </label>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" (click)="closeModal()">Annuler</button>
+        <button class="btn btn-primary" (click)="saveEmployee()">
+          {{ isEditMode() ? 'Modifier' : 'Créer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Change PIN Modal -->
+@if (showPinModal()) {
+  <div class="modal-overlay" (click)="closePinModal()">
+    <div class="modal-content" style="max-width: 400px;" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">Modifier le code PIN</h3>
+        <button class="modal-close" (click)="closePinModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        @if (selectedEmployeeForPin(); as employee) {
+          <p class="text-sm text-secondary mb-4">
+            Employé: <strong>{{ employee.full_name }}</strong>
+          </p>
+        }
+
+        <form class="space-y-4">
+          <div class="form-group">
+            <label class="form-label">Nouveau code PIN (4-6 chiffres)</label>
+            <input
+              type="password"
+              class="form-input"
+              [value]="newPin()"
+              (input)="newPin.set($any($event.target).value)"
+              minlength="4"
+              maxlength="6"
+              pattern="[0-9]*"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Confirmer le code PIN</label>
+            <input
+              type="password"
+              class="form-input"
+              [value]="confirmPin()"
+              (input)="confirmPin.set($any($event.target).value)"
+              minlength="4"
+              maxlength="6"
+              pattern="[0-9]*"
+            />
+          </div>
+
+          @if (newPin() && confirmPin() && newPin() !== confirmPin()) {
+            <p class="text-sm text-error">Les codes PIN ne correspondent pas</p>
+          }
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" (click)="closePinModal()">Annuler</button>
+        <button
+          class="btn btn-primary"
+          (click)="savePinCode()"
+          [disabled]="!canSavePin()">
+          Modifier le PIN
+        </button>
+      </div>
+    </div>
+  </div>
+}

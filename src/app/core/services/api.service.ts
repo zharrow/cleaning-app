@@ -544,13 +544,25 @@ export class ApiService {
   }
 
   /**
-   * Supprime un performer (soft delete)
+   * Masque un performer (soft delete)
    */
-  async deletePerformer(id: string): Promise<{ message: string }> {
+  async hidePerformer(id: string): Promise<{ message: string }> {
     const token = await this.authService.getToken();
     if (!token) throw new Error('Non authentifié');
-    
+
     return this.httpDelete<{ message: string }>(`/performers/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  }
+
+  /**
+   * Supprime définitivement un performer (hard delete)
+   */
+  async deletePerformerPermanently(id: string): Promise<{ message: string }> {
+    const token = await this.authService.getToken();
+    if (!token) throw new Error('Non authentifié');
+
+    return this.httpDelete<{ message: string }>(`/performers/${id}/permanent`, {
       headers: { Authorization: `Bearer ${token}` }
     });
   }
@@ -1000,13 +1012,33 @@ export class ApiService {
           ...options.headers
         }
       });
-      
+
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        // Try to get detailed error message from server
+        try {
+          const errorData = await response.json();
+          const errorMessage = errorData.detail || errorData.message || response.statusText;
+          throw new Error(errorMessage);
+        } catch (jsonError) {
+          // If JSON parsing fails, use generic error
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
       }
-      
-      const data = await response.json();
-      return data;
+
+      // Handle 204 No Content responses (common for DELETE operations)
+      if (response.status === 204) {
+        return { success: true, message: 'Deleted successfully' } as T;
+      }
+
+      // Try to parse JSON, handle empty responses gracefully
+      try {
+        const data = await response.json();
+        return data;
+      } catch (jsonError) {
+        // If JSON parsing fails but response was successful, return success
+        console.warn('DELETE response was not JSON, assuming success');
+        return { success: true, message: 'Operation completed successfully' } as T;
+      }
     } catch (error) {
       console.error(`DELETE ${endpoint} failed:`, error);
       throw error;

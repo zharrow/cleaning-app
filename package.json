@@ -1,12 +1,12 @@
 {
-  "name": "micro-creche-app",
+  "name": "clean-app",
   "version": "1.0.0",
-  "description": "Application de gestion du nettoyage quotidien pour micro-crèche",
+  "description": "cLean - Application moderne de gestion des tâches de nettoyage",
   "keywords": [
     "angular",
     "pwa",
     "cleaning",
-    "micro-creche",
+    "task-management",
     "firebase",
     "typescript"
   ],
@@ -28,7 +28,7 @@
     "format": "prettier --write \"src/**/*.{ts,html,css,scss,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,html,css,scss,json}\"",
     "type-check": "tsc --noEmit",
-    "precommit": "npm run lint && npm run type-check && npm run format:check",
+    "precommit": "pnpm run lint && pnpm run type-check && pnpm run format:check",
     "prepare": "husky install",
     "postinstall": "ngcc --properties es2023 browser module main",
     "analyze": "npm run build:analyze",

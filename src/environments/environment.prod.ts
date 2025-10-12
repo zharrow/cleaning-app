@@ -14,20 +14,20 @@ export const environment = {
   // ===================
   // API Configuration
   // ===================
-  apiUrl: 'https://api.micro-creche.fr/api',
+  apiUrl: (globalThis as any)?.process?.env?.['NG_APP_API_URL'] || 'https://clean-api.onrender.com',
   apiTimeout: 30000,
-  
+
   // ===================
   // Firebase Configuration (Production)
   // ===================
   firebase: {
-    apiKey: "YOUR_PROD_API_KEY",
-    authDomain: "micro-creche-prod.firebaseapp.com",
-    projectId: "micro-creche-prod",
-    storageBucket: "micro-creche-prod.appspot.com",
-    messagingSenderId: "987654321",
-    appId: "1:987654321:web:prod123456",
-    measurementId: "G-PRODPRODPROD"
+    apiKey: (globalThis as any)?.process?.env?.['NG_APP_FIREBASE_API_KEY'] || '',
+    authDomain: (globalThis as any)?.process?.env?.['NG_APP_FIREBASE_AUTH_DOMAIN'] || '',
+    projectId: (globalThis as any)?.process?.env?.['NG_APP_FIREBASE_PROJECT_ID'] || '',
+    storageBucket: '', // 🚫 Storage désactivé - on utilise l'API backend
+    messagingSenderId: (globalThis as any)?.process?.env?.['NG_APP_FIREBASE_MESSAGING_SENDER_ID'] || '',
+    appId: (globalThis as any)?.process?.env?.['NG_APP_FIREBASE_APP_ID'] || '',
+    measurementId: (globalThis as any)?.process?.env?.['NG_APP_FIREBASE_MEASUREMENT_ID'] || ''
   },
   
   // ===================

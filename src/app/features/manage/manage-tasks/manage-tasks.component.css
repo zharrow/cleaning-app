@@ -1,0 +1,53 @@
+:host {
+  display: block;
+}
+
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Fix pour les dropdowns qui sont coupés */
+.card {
+  overflow: hidden;
+}
+
+.card.overflow-visible {
+  overflow: visible !important;
+  z-index: 10;
+  position: relative;
+}
+
+.dropdown-container {
+  z-index: 20;
+  position: relative;
+}
+
+.dropdown-menu {
+  z-index: 1000 !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95);
+  animation: dropdown-appear 0.15s ease-out;
+}
+
+@keyframes dropdown-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* S'assurer que les grids ne coupent pas les dropdowns */
+.grid {
+  overflow: visible;
+}

@@ -21,6 +21,13 @@ export const routes: Routes = [
     title: 'Connexion - Micro-Crèche'
   },
   {
+    path: 'login/pin',
+    loadComponent: () => import('./features/auth/pin-login/pin-login.component')
+      .then(m => m.PinLoginComponent),
+    canActivate: [publicGuard],
+    title: 'Connexion PIN - Employé'
+  },
+  {
     path: 'auth-diagnostic',
     loadComponent: () => import('./features/auth/auth-diagnostic/auth-diagnostic.component')
       .then(m => m.AuthDiagnosticComponent),
@@ -36,6 +43,34 @@ export const routes: Routes = [
       .then(m => m.SetupEnterpriseComponent),
     canActivate: [authGuard],
     title: 'Configuration entreprise - Micro-Crèche'
+  },
+
+  // ===================
+  // Routes Tablet (Employés uniquement)
+  // ===================
+  {
+    path: 'tablet',
+    canActivate: [authGuard],
+    children: [
+      {
+        path: '',
+        loadComponent: () => import('./features/tablet/tablet-home/tablet-home.component')
+          .then(m => m.TabletHomeComponent),
+        title: 'Accueil Tablet - Micro-Crèche'
+      },
+      {
+        path: 'room/:roomId',
+        loadComponent: () => import('./features/tablet/tablet-room/tablet-room.component')
+          .then(m => m.TabletRoomComponent),
+        title: 'Salle - Micro-Crèche'
+      },
+      {
+        path: 'haccp',
+        loadComponent: () => import('./features/tablet/tablet-haccp/tablet-haccp.component')
+          .then(m => m.TabletHaccpComponent),
+        title: 'HACCP - Tablet'
+      }
+    ]
   },
 
   // ===================
@@ -107,6 +142,106 @@ export const routes: Routes = [
       },
 
       // ===================
+      // Routes Analytics (Developer uniquement)
+      // ===================
+      {
+        path: 'analytics',
+        loadComponent: () => import('./features/analytics/developer-analytics.component')
+          .then(m => m.DeveloperAnalyticsComponent),
+        title: 'Analytics - Developer'
+      },
+
+      // ===================
+      // Routes HACCP (Admin uniquement)
+      // ===================
+      {
+        path: 'haccp',
+        canActivate: [manageGuard],
+        children: [
+          {
+            path: '',
+            redirectTo: 'dashboard',
+            pathMatch: 'full'
+          },
+          {
+            path: 'dashboard',
+            loadComponent: () => import('./features/haccp/haccp-dashboard.component')
+              .then(m => m.HaccpDashboardComponent),
+            title: 'Dashboard HACCP - Micro-Crèche'
+          },
+          {
+            path: 'children',
+            loadComponent: () => import('./features/haccp/children.component')
+              .then(m => m.ChildrenComponent),
+            title: 'Enfants - HACCP'
+          },
+          {
+            path: 'meals',
+            loadComponent: () => import('./features/haccp/meals.component')
+              .then(m => m.MealsComponent),
+            title: 'Repas - HACCP'
+          },
+          {
+            path: 'products',
+            loadComponent: () => import('./features/haccp/products.component')
+              .then(m => m.ProductsComponent),
+            title: 'Produits - HACCP'
+          },
+          {
+            path: 'suppliers',
+            loadComponent: () => import('./features/haccp/suppliers.component')
+              .then(m => m.SuppliersComponent),
+            title: 'Fournisseurs - HACCP'
+          },
+          {
+            path: 'equipment',
+            loadComponent: () => import('./features/haccp/equipment.component')
+              .then(m => m.EquipmentComponent),
+            title: 'Équipements - HACCP'
+          },
+          {
+            path: 'non-compliances',
+            loadComponent: () => import('./features/haccp/non-compliances.component')
+              .then(m => m.NonCompliancesComponent),
+            title: 'Non-conformités - HACCP'
+          },
+          {
+            path: 'documents',
+            loadComponent: () => import('./features/haccp/documents.component')
+              .then(m => m.DocumentsComponent),
+            title: 'Documents - HACCP'
+          }
+        ]
+      },
+
+      // ===================
+      // Routes Communication (Admin uniquement)
+      // ===================
+      {
+        path: 'communication',
+        canActivate: [manageGuard],
+        children: [
+          {
+            path: '',
+            redirectTo: 'messages',
+            pathMatch: 'full'
+          },
+          {
+            path: 'messages',
+            loadComponent: () => import('./features/communication/messages.component')
+              .then(m => m.MessagesComponent),
+            title: 'Messages - Micro-Crèche'
+          },
+          {
+            path: 'notifications',
+            loadComponent: () => import('./features/communication/notifications.component')
+              .then(m => m.NotificationsComponent),
+            title: 'Notifications - Micro-Crèche'
+          }
+        ]
+      },
+
+      // ===================
       // Routes de gestion (Admin/Manager uniquement)
       // ===================
       {
@@ -144,12 +279,19 @@ export const routes: Routes = [
             title: 'Pièces - Micro-Crèche'
           },
 
-          // Gestion des intervenants
+          // Gestion des employés (remplace performers)
+          {
+            path: 'employees',
+            loadComponent: () => import('./features/manage/manage-employees/manage-employees.component')
+              .then(m => m.ManageEmployeesComponent),
+            title: 'Employés - Micro-Crèche'
+          },
+
+          // Legacy route (redirect to employees)
           {
             path: 'performers',
-            loadComponent: () => import('./features/manage/manage-performers/manage-performers.component')
-              .then(m => m.ManagePerformersComponent),
-            title: 'Intervenants - Micro-Crèche'
+            redirectTo: 'employees',
+            pathMatch: 'full'
           },
 
           // Gestion des utilisateurs (admin seulement)

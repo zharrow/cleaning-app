@@ -68,10 +68,11 @@ export class EnterpriseService {
   
   // Signals publics (readonly)
   readonly enterprise = this._enterprise.asReadonly();
+  readonly currentEnterprise = this._enterprise.asReadonly(); // Alias for compatibility
   readonly basicInfo = this._basicInfo.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
-  
+
   // Computed signals
   readonly hasEnterprise = computed(() => this._enterprise() !== null);
   readonly enterpriseName = computed(() => this._basicInfo()?.name || '');

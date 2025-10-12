@@ -1,0 +1,81 @@
+<div class="pin-login-container">
+  <div class="pin-login-card">
+    <!-- Header -->
+    <div class="pin-header">
+      <button
+        type="button"
+        class="back-button"
+        (click)="goToMainLogin()"
+        [disabled]="isLoading()">
+        ← Retour
+      </button>
+      <h1 class="pin-title">Connexion Employé</h1>
+      @if (enterprise(); as ent) {
+        <p class="enterprise-name">{{ ent.name }}</p>
+      }
+    </div>
+
+    <!-- PIN Display -->
+    <div class="pin-display">
+      <div class="pin-dots">
+        {{ getMaskedPin() || 'Entrez votre code PIN' }}
+      </div>
+    </div>
+
+    <!-- Error Message -->
+    @if (error(); as errorMsg) {
+      <div class="error-message">
+        {{ errorMsg }}
+      </div>
+    }
+
+    <!-- Numeric Keypad -->
+    <div class="keypad">
+      @for (number of keypadNumbers; track number) {
+        <button
+          type="button"
+          class="keypad-button"
+          (click)="addDigit(number)"
+          [disabled]="isLoading() || pinCode().length >= 6">
+          {{ number }}
+        </button>
+      }
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+      <button
+        type="button"
+        class="action-btn clear-btn"
+        (click)="clearPin()"
+        [disabled]="isLoading() || pinCode().length === 0">
+        Effacer
+      </button>
+
+      <button
+        type="button"
+        class="action-btn backspace-btn"
+        (click)="removeDigit()"
+        [disabled]="isLoading() || pinCode().length === 0">
+        ←
+      </button>
+
+      <button
+        type="button"
+        class="action-btn submit-btn"
+        (click)="onSubmit()"
+        [disabled]="isLoading() || pinCode().length < 4">
+        @if (isLoading()) {
+          <span class="spinner"></span>
+        } @else {
+          Valider
+        }
+      </button>
+    </div>
+
+    <!-- Helper Text -->
+    <p class="helper-text">
+      Code PIN : 4 à 6 chiffres
+    </p>
+  </div>
+</div>
