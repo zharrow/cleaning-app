@@ -109,46 +109,63 @@ import { HaccpService, Meal, Child, Supplier, Temperature } from '../../core/ser
 
       <!-- Modal Repas -->
       @if (showMealModal()) {
-        <div class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" (click)="closeMealModal()">
-          <div class="modal-content bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" (click)="$event.stopPropagation()">
-            <h2 class="text-2xl font-bold mb-4">{{ editingMeal() ? 'Modifier' : 'Ajouter' }} un repas</h2>
-            <form (ngSubmit)="saveMeal()" class="space-y-4">
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium mb-1">Date *</label>
-                  <input [(ngModel)]="mealFormData.date" name="date" type="date" required class="w-full px-3 py-2 border rounded">
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Type de repas *</label>
-                  <select [(ngModel)]="mealFormData.meal_type" name="meal_type" required class="w-full px-3 py-2 border rounded">
-                    <option value="Breakfast">Petit-déjeuner</option>
-                    <option value="Lunch">Déjeuner</option>
-                    <option value="Snack">Goûter</option>
-                  </select>
+        <div class="modal-overlay" (click)="closeMealModal()">
+          <div class="modal-content max-w-2xl" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h3 class="modal-title">
+                {{ editingMeal() ? 'Modifier un repas' : 'Ajouter un repas' }}
+              </h3>
+              <button class="modal-close" (click)="closeMealModal()">✕</button>
+            </div>
+
+            <form (ngSubmit)="saveMeal()">
+              <div class="modal-body">
+                <div class="space-y-4">
+                  <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                      <label class="form-label required">Date</label>
+                      <input [(ngModel)]="mealFormData.date" name="date" type="date" required class="form-input">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label required">Type de repas</label>
+                      <select [(ngModel)]="mealFormData.meal_type" name="meal_type" required class="form-input form-select">
+                        <option value="Breakfast">Petit-déjeuner</option>
+                        <option value="Lunch">Déjeuner</option>
+                        <option value="Snack">Goûter</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label required">Description du menu</label>
+                    <textarea [(ngModel)]="mealFormData.description" name="description" rows="3" required class="form-input form-textarea" placeholder="Description complète du repas"></textarea>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                      <label class="form-label">Fournisseur</label>
+                      <select [(ngModel)]="mealFormData.supplier_id" name="supplier_id" class="form-input form-select">
+                        <option value="">Aucun</option>
+                        @for (supplier of suppliers(); track supplier.id) {
+                          <option [value]="supplier.id">{{ supplier.name }}</option>
+                        }
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Responsable</label>
+                      <input [(ngModel)]="mealFormData.responsible_id" name="responsible_id" class="form-input" placeholder="ID Employé">
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Description du menu *</label>
-                <textarea [(ngModel)]="mealFormData.description" name="description" rows="3" required class="w-full px-3 py-2 border rounded"></textarea>
-              </div>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium mb-1">Fournisseur</label>
-                  <select [(ngModel)]="mealFormData.supplier_id" name="supplier_id" class="w-full px-3 py-2 border rounded">
-                    <option value="">Aucun</option>
-                    @for (supplier of suppliers(); track supplier.id) {
-                      <option [value]="supplier.id">{{ supplier.name }}</option>
-                    }
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Responsable</label>
-                  <input [(ngModel)]="mealFormData.responsible_id" name="responsible_id" class="w-full px-3 py-2 border rounded" placeholder="ID Employé">
-                </div>
-              </div>
-              <div class="flex gap-2 justify-end">
-                <button type="button" (click)="closeMealModal()" class="px-4 py-2 border rounded hover:bg-gray-50">Annuler</button>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Enregistrer</button>
+
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="closeMealModal()">
+                  Annuler
+                </button>
+                <button type="submit" class="btn btn-primary">
+                  {{ editingMeal() ? 'Modifier' : 'Créer' }}
+                </button>
               </div>
             </form>
           </div>
@@ -157,40 +174,57 @@ import { HaccpService, Meal, Child, Supplier, Temperature } from '../../core/ser
 
       <!-- Modal Température -->
       @if (showTempModal()) {
-        <div class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" (click)="closeTempModal()">
-          <div class="modal-content bg-white rounded-lg p-6 w-full max-w-md" (click)="$event.stopPropagation()">
-            <h2 class="text-2xl font-bold mb-4">Ajouter un contrôle de température</h2>
-            <form (ngSubmit)="saveTemperature()" class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium mb-1">Point de contrôle *</label>
-                <select [(ngModel)]="tempFormData.checkpoint" name="checkpoint" required class="w-full px-3 py-2 border rounded">
-                  <option value="Reception">Réception</option>
-                  <option value="Holding">Maintien</option>
-                  <option value="Service">Service</option>
-                  <option value="Storage">Stockage</option>
-                </select>
+        <div class="modal-overlay" (click)="closeTempModal()">
+          <div class="modal-content max-w-lg" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h3 class="modal-title">Ajouter un contrôle de température</h3>
+              <button class="modal-close" (click)="closeTempModal()">✕</button>
+            </div>
+
+            <form (ngSubmit)="saveTemperature()">
+              <div class="modal-body">
+                <div class="space-y-4">
+                  <div class="form-group">
+                    <label class="form-label required">Point de contrôle</label>
+                    <select [(ngModel)]="tempFormData.checkpoint" name="checkpoint" required class="form-input form-select">
+                      <option value="Reception">Réception</option>
+                      <option value="Holding">Maintien</option>
+                      <option value="Service">Service</option>
+                      <option value="Storage">Stockage</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label required">Température (°C)</label>
+                    <input [(ngModel)]="tempFormData.temperature" name="temperature" type="number" step="0.1" required class="form-input" placeholder="ex: 3.5">
+                  </div>
+
+                  <div class="form-group">
+                    <label class="flex items-center gap-2">
+                      <input [(ngModel)]="tempFormData.is_compliant" name="is_compliant" type="checkbox" class="form-checkbox">
+                      <span class="form-label mb-0">Conforme aux normes</span>
+                    </label>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Observations</label>
+                    <textarea [(ngModel)]="tempFormData.observations" name="observations" rows="2" class="form-input form-textarea" placeholder="Observations complémentaires (optionnel)"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label required">Date/Heure de contrôle</label>
+                    <input [(ngModel)]="tempFormData.control_date" name="control_date" type="datetime-local" required class="form-input">
+                  </div>
+                </div>
               </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Température (°C) *</label>
-                <input [(ngModel)]="tempFormData.temperature" name="temperature" type="number" step="0.1" required class="w-full px-3 py-2 border rounded">
-              </div>
-              <div>
-                <label class="flex items-center gap-2">
-                  <input [(ngModel)]="tempFormData.is_compliant" name="is_compliant" type="checkbox" class="w-4 h-4">
-                  <span>Conforme</span>
-                </label>
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Observations</label>
-                <textarea [(ngModel)]="tempFormData.observations" name="observations" rows="2" class="w-full px-3 py-2 border rounded"></textarea>
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Date/Heure de contrôle *</label>
-                <input [(ngModel)]="tempFormData.control_date" name="control_date" type="datetime-local" required class="w-full px-3 py-2 border rounded">
-              </div>
-              <div class="flex gap-2 justify-end">
-                <button type="button" (click)="closeTempModal()" class="px-4 py-2 border rounded hover:bg-gray-50">Annuler</button>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Enregistrer</button>
+
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="closeTempModal()">
+                  Annuler
+                </button>
+                <button type="submit" class="btn btn-primary">
+                  Enregistrer
+                </button>
               </div>
             </form>
           </div>

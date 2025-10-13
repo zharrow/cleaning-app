@@ -835,6 +835,65 @@ export class ApiService {
   }
 
   /**
+   * Méthodes HTTP publiques pour les services externes
+   */
+
+  get<T>(endpoint: string): Observable<T> {
+    return from(this.getAuthToken()).pipe(
+      switchMap(token =>
+        from(this.httpGet<T>(endpoint, {
+          headers: { Authorization: `Bearer ${token}` }
+        }))
+      ),
+      catchError(error => throwError(() => error))
+    );
+  }
+
+  post<T>(endpoint: string, body: any): Observable<T> {
+    return from(this.getAuthToken()).pipe(
+      switchMap(token =>
+        from(this.httpPost<T>(endpoint, body, {
+          headers: { Authorization: `Bearer ${token}` }
+        }))
+      ),
+      catchError(error => throwError(() => error))
+    );
+  }
+
+  put<T>(endpoint: string, body: any): Observable<T> {
+    return from(this.getAuthToken()).pipe(
+      switchMap(token =>
+        from(this.httpPut<T>(endpoint, body, {
+          headers: { Authorization: `Bearer ${token}` }
+        }))
+      ),
+      catchError(error => throwError(() => error))
+    );
+  }
+
+  delete<T>(endpoint: string): Observable<T> {
+    return from(this.getAuthToken()).pipe(
+      switchMap(token =>
+        from(this.httpDelete<T>(endpoint, {
+          headers: { Authorization: `Bearer ${token}` }
+        }))
+      ),
+      catchError(error => throwError(() => error))
+    );
+  }
+
+  patch<T>(endpoint: string, body: any): Observable<T> {
+    return from(this.getAuthToken()).pipe(
+      switchMap(token =>
+        from(this.httpPatch<T>(endpoint, body, {
+          headers: { Authorization: `Bearer ${token}` }
+        }))
+      ),
+      catchError(error => throwError(() => error))
+    );
+  }
+
+  /**
    * Exporte une session en PDF avec options personnalisables
    */
   async exportSessionToPdf(sessionId: string, options: PdfExportOptions = {}): Promise<void> {

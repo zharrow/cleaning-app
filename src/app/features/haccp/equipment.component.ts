@@ -101,43 +101,52 @@ import { HaccpService, Equipment } from '../../core/services/haccp.service';
 
       <!-- Modal -->
       @if (showModal()) {
-        <div class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" (click)="closeModal()">
-          <div class="modal-content bg-white rounded-lg p-6 w-full max-w-md" (click)="$event.stopPropagation()">
-            <h2 class="text-2xl font-bold mb-4">{{ editingEquipment() ? 'Modifier' : 'Ajouter' }} un équipement</h2>
-            <form (ngSubmit)="saveEquipment()" class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium mb-1">Nom de l'équipement *</label>
-                <input [(ngModel)]="formData.name" name="name" required class="w-full px-3 py-2 border rounded">
+        <div class="modal-overlay" (click)="closeModal()">
+          <div class="modal-content max-w-md" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h3 class="modal-title">{{ editingEquipment() ? 'Modifier' : 'Ajouter' }} un équipement</h3>
+              <button class="modal-close" (click)="closeModal()">✕</button>
+            </div>
+            <form (ngSubmit)="saveEquipment()">
+              <div class="modal-body">
+                <div class="space-y-4">
+                  <div class="form-group">
+                    <label class="form-label required">Nom de l'équipement</label>
+                    <input [(ngModel)]="formData.name" name="name" required class="form-input">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select [(ngModel)]="formData.type" name="type" class="form-select">
+                      <option value="">Sélectionner</option>
+                      <option value="frigo">Frigo</option>
+                      <option value="four">Four</option>
+                      <option value="chauffe-repas">Chauffe-repas</option>
+                      <option value="autre">Autre</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Température cible (°C)</label>
+                    <input [(ngModel)]="formData.target_temperature" name="target_temperature" type="number" step="0.1" class="form-input">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Date du dernier contrôle</label>
+                    <input [(ngModel)]="formData.last_control_date" name="last_control_date" type="date" class="form-input">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-checkbox">
+                      <input [(ngModel)]="formData.is_compliant" name="is_compliant" type="checkbox" id="is_compliant">
+                      <span>Conforme</span>
+                    </label>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Observations</label>
+                    <textarea [(ngModel)]="formData.observations" name="observations" rows="3" class="form-textarea"></textarea>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Type</label>
-                <select [(ngModel)]="formData.type" name="type" class="w-full px-3 py-2 border rounded">
-                  <option value="">Sélectionner</option>
-                  <option value="frigo">Frigo</option>
-                  <option value="four">Four</option>
-                  <option value="chauffe-repas">Chauffe-repas</option>
-                  <option value="autre">Autre</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Température cible (°C)</label>
-                <input [(ngModel)]="formData.target_temperature" name="target_temperature" type="number" step="0.1" class="w-full px-3 py-2 border rounded">
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Date du dernier contrôle</label>
-                <input [(ngModel)]="formData.last_control_date" name="last_control_date" type="date" class="w-full px-3 py-2 border rounded">
-              </div>
-              <div class="flex items-center gap-2">
-                <input [(ngModel)]="formData.is_compliant" name="is_compliant" type="checkbox" id="is_compliant" class="w-4 h-4">
-                <label for="is_compliant" class="text-sm font-medium">Conforme</label>
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Observations</label>
-                <textarea [(ngModel)]="formData.observations" name="observations" rows="3" class="w-full px-3 py-2 border rounded"></textarea>
-              </div>
-              <div class="flex gap-2 justify-end">
-                <button type="button" (click)="closeModal()" class="px-4 py-2 border rounded hover:bg-gray-50">Annuler</button>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Enregistrer</button>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="closeModal()">Annuler</button>
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
               </div>
             </form>
           </div>

@@ -28,7 +28,7 @@ import { HaccpService, Product, Supplier } from '../../core/services/haccp.servi
           </div>
         </div>
       }
-      @if (expiringS oonProducts().length > 0) {
+      @if (expiringSoonProducts().length > 0) {
         <div class="alert bg-orange-50 border-l-4 border-orange-500 p-4 mb-4">
           <div class="flex items-center gap-2">
             <span class="text-2xl">⚠️</span>
@@ -132,67 +132,74 @@ import { HaccpService, Product, Supplier } from '../../core/services/haccp.servi
 
       <!-- Modal -->
       @if (showModal()) {
-        <div class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" (click)="closeModal()">
-          <div class="modal-content bg-white rounded-lg p-6 w-full max-w-2xl" (click)="$event.stopPropagation()">
-            <h2 class="text-2xl font-bold mb-4">{{ editingProduct() ? 'Modifier' : 'Ajouter' }} un produit</h2>
-            <form (ngSubmit)="saveProduct()" class="space-y-4">
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium mb-1">Nom du produit *</label>
-                  <input [(ngModel)]="formData.name" name="name" required class="w-full px-3 py-2 border rounded">
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Catégorie</label>
-                  <select [(ngModel)]="formData.category" name="category" class="w-full px-3 py-2 border rounded">
-                    <option value="">Sélectionner</option>
-                    <option value="Viande">Viande</option>
-                    <option value="Laitier">Laitier</option>
-                    <option value="Légume">Légume</option>
-                    <option value="Fruit">Fruit</option>
-                    <option value="Féculents">Féculents</option>
-                    <option value="Autre">Autre</option>
-                  </select>
+        <div class="modal-overlay" (click)="closeModal()">
+          <div class="modal-content max-w-2xl" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h3 class="modal-title">{{ editingProduct() ? 'Modifier' : 'Ajouter' }} un produit</h3>
+              <button class="modal-close" (click)="closeModal()">✕</button>
+            </div>
+            <form (ngSubmit)="saveProduct()">
+              <div class="modal-body">
+                <div class="space-y-4">
+                  <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                      <label class="form-label required">Nom du produit</label>
+                      <input [(ngModel)]="formData.name" name="name" required class="form-input">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Catégorie</label>
+                      <select [(ngModel)]="formData.category" name="category" class="form-select">
+                        <option value="">Sélectionner</option>
+                        <option value="Viande">Viande</option>
+                        <option value="Laitier">Laitier</option>
+                        <option value="Légume">Légume</option>
+                        <option value="Fruit">Fruit</option>
+                        <option value="Féculents">Féculents</option>
+                        <option value="Autre">Autre</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Allergènes</label>
+                    <input [(ngModel)]="formData.allergens" name="allergens" placeholder="Ex: Gluten, Lait, Œufs" class="form-input">
+                    @if (formData.allergens) {
+                      <p class="text-xs text-orange-600 mt-1">⚠️ Allergènes détectés</p>
+                    }
+                  </div>
+                  <div class="grid grid-cols-3 gap-4">
+                    <div class="form-group">
+                      <label class="form-label">Stock actuel</label>
+                      <input [(ngModel)]="formData.current_stock" name="current_stock" type="number" step="0.1" class="form-input">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Unité</label>
+                      <select [(ngModel)]="formData.stock_unit" name="stock_unit" class="form-select">
+                        <option value="kg">kg</option>
+                        <option value="L">L</option>
+                        <option value="unité">unité</option>
+                        <option value="g">g</option>
+                        <option value="mL">mL</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Date de péremption</label>
+                      <input [(ngModel)]="formData.expiry_date" name="expiry_date" type="date" class="form-input">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Fournisseur</label>
+                    <select [(ngModel)]="formData.supplier_id" name="supplier_id" class="form-select">
+                      <option value="">Aucun</option>
+                      @for (supplier of suppliers(); track supplier.id) {
+                        <option [value]="supplier.id">{{ supplier.name }}</option>
+                      }
+                    </select>
+                  </div>
                 </div>
               </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Allergènes</label>
-                <input [(ngModel)]="formData.allergens" name="allergens" placeholder="Ex: Gluten, Lait, Œufs" class="w-full px-3 py-2 border rounded">
-                @if (formData.allergens) {
-                  <p class="text-xs text-orange-600 mt-1">⚠️ Allergènes détectés</p>
-                }
-              </div>
-              <div class="grid grid-cols-3 gap-4">
-                <div>
-                  <label class="block text-sm font-medium mb-1">Stock actuel</label>
-                  <input [(ngModel)]="formData.current_stock" name="current_stock" type="number" step="0.1" class="w-full px-3 py-2 border rounded">
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Unité</label>
-                  <select [(ngModel)]="formData.stock_unit" name="stock_unit" class="w-full px-3 py-2 border rounded">
-                    <option value="kg">kg</option>
-                    <option value="L">L</option>
-                    <option value="unité">unité</option>
-                    <option value="g">g</option>
-                    <option value="mL">mL</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Date de péremption</label>
-                  <input [(ngModel)]="formData.expiry_date" name="expiry_date" type="date" class="w-full px-3 py-2 border rounded">
-                </div>
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Fournisseur</label>
-                <select [(ngModel)]="formData.supplier_id" name="supplier_id" class="w-full px-3 py-2 border rounded">
-                  <option value="">Aucun</option>
-                  @for (supplier of suppliers(); track supplier.id) {
-                    <option [value]="supplier.id">{{ supplier.name }}</option>
-                  }
-                </select>
-              </div>
-              <div class="flex gap-2 justify-end">
-                <button type="button" (click)="closeModal()" class="px-4 py-2 border rounded hover:bg-gray-50">Annuler</button>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Enregistrer</button>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="closeModal()">Annuler</button>
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
               </div>
             </form>
           </div>

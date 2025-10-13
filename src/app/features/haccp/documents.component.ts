@@ -113,47 +113,54 @@ import { HaccpService, Document } from '../../core/services/haccp.service';
 
       <!-- Modal -->
       @if (showModal()) {
-        <div class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" (click)="closeModal()">
-          <div class="modal-content bg-white rounded-lg p-6 w-full max-w-2xl" (click)="$event.stopPropagation()">
-            <h2 class="text-2xl font-bold mb-4">{{ editingDocument() ? 'Modifier' : 'Ajouter' }} un document</h2>
-            <form (ngSubmit)="saveDocument()" class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium mb-1">Nom du document *</label>
-                <input [(ngModel)]="formData.name" name="name" required class="w-full px-3 py-2 border rounded">
-              </div>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium mb-1">Catégorie *</label>
-                  <select [(ngModel)]="formData.category" name="category" required class="w-full px-3 py-2 border rounded">
-                    <option value="Temperatures">Températures</option>
-                    <option value="Cleaning">Nettoyage</option>
-                    <option value="Training">Formation</option>
-                    <option value="Compliance">Conformité</option>
-                    <option value="Other">Autre</option>
-                  </select>
+        <div class="modal-overlay" (click)="closeModal()">
+          <div class="modal-content max-w-2xl" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h3 class="modal-title">{{ editingDocument() ? 'Modifier' : 'Ajouter' }} un document</h3>
+              <button class="modal-close" (click)="closeModal()">✕</button>
+            </div>
+            <form (ngSubmit)="saveDocument()">
+              <div class="modal-body">
+                <div class="space-y-4">
+                  <div class="form-group">
+                    <label class="form-label required">Nom du document</label>
+                    <input [(ngModel)]="formData.name" name="name" required class="form-input">
+                  </div>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                      <label class="form-label required">Catégorie</label>
+                      <select [(ngModel)]="formData.category" name="category" required class="form-select">
+                        <option value="Temperatures">Températures</option>
+                        <option value="Cleaning">Nettoyage</option>
+                        <option value="Training">Formation</option>
+                        <option value="Compliance">Conformité</option>
+                        <option value="Other">Autre</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label required">Date de création</label>
+                      <input [(ngModel)]="formData.creation_date" name="creation_date" type="date" required class="form-input">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label required">Chemin du fichier</label>
+                    <input [(ngModel)]="formData.file_path" name="file_path" required class="form-input" placeholder="Ex: /documents/haccp/temperatures_2024.pdf">
+                  </div>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                      <label class="form-label">Durée de conservation</label>
+                      <input [(ngModel)]="formData.retention_period" name="retention_period" class="form-input" placeholder="Ex: 3 ans">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Responsable</label>
+                      <input [(ngModel)]="formData.responsible_id" name="responsible_id" class="form-input">
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Date de création *</label>
-                  <input [(ngModel)]="formData.creation_date" name="creation_date" type="date" required class="w-full px-3 py-2 border rounded">
-                </div>
               </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Chemin du fichier *</label>
-                <input [(ngModel)]="formData.file_path" name="file_path" required class="w-full px-3 py-2 border rounded" placeholder="Ex: /documents/haccp/temperatures_2024.pdf">
-              </div>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium mb-1">Durée de conservation</label>
-                  <input [(ngModel)]="formData.retention_period" name="retention_period" class="w-full px-3 py-2 border rounded" placeholder="Ex: 3 ans">
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Responsable</label>
-                  <input [(ngModel)]="formData.responsible_id" name="responsible_id" class="w-full px-3 py-2 border rounded">
-                </div>
-              </div>
-              <div class="flex gap-2 justify-end">
-                <button type="button" (click)="closeModal()" class="px-4 py-2 border rounded hover:bg-gray-50">Annuler</button>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Enregistrer</button>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="closeModal()">Annuler</button>
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
               </div>
             </form>
           </div>

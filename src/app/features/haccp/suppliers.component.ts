@@ -75,43 +75,52 @@ import { HaccpService, Supplier } from '../../core/services/haccp.service';
 
       <!-- Modal -->
       @if (showModal()) {
-        <div class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" (click)="closeModal()">
-          <div class="modal-content bg-white rounded-lg p-6 w-full max-w-md" (click)="$event.stopPropagation()">
-            <h2 class="text-2xl font-bold mb-4">{{ editingSupplier() ? 'Modifier' : 'Ajouter' }} un fournisseur</h2>
-            <form (ngSubmit)="saveSupplier()" class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium mb-1">Nom du fournisseur *</label>
-                <input [(ngModel)]="formData.name" name="name" required class="w-full px-3 py-2 border rounded">
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Contact</label>
-                <input [(ngModel)]="formData.contact_name" name="contact_name" class="w-full px-3 py-2 border rounded">
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Téléphone</label>
-                <input [(ngModel)]="formData.phone" name="phone" type="tel" class="w-full px-3 py-2 border rounded">
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Email</label>
-                <input [(ngModel)]="formData.email" name="email" type="email" class="w-full px-3 py-2 border rounded">
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Adresse</label>
-                <textarea [(ngModel)]="formData.address" name="address" rows="2" class="w-full px-3 py-2 border rounded"></textarea>
-              </div>
-              <div class="flex items-center gap-2">
-                <input [(ngModel)]="formData.haccp_certified" name="haccp_certified" type="checkbox" id="haccp_certified" class="w-4 h-4">
-                <label for="haccp_certified" class="text-sm font-medium">Certifié HACCP</label>
-              </div>
-              @if (formData.haccp_certified) {
-                <div>
-                  <label class="block text-sm font-medium mb-1">Date de validation</label>
-                  <input [(ngModel)]="formData.validation_date" name="validation_date" type="date" class="w-full px-3 py-2 border rounded">
+        <div class="modal-overlay" (click)="closeModal()">
+          <div class="modal-content max-w-md" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h3 class="modal-title">{{ editingSupplier() ? 'Modifier' : 'Ajouter' }} un fournisseur</h3>
+              <button class="modal-close" (click)="closeModal()">✕</button>
+            </div>
+            <form (ngSubmit)="saveSupplier()">
+              <div class="modal-body">
+                <div class="space-y-4">
+                  <div class="form-group">
+                    <label class="form-label required">Nom du fournisseur</label>
+                    <input [(ngModel)]="formData.name" name="name" required class="form-input">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Contact</label>
+                    <input [(ngModel)]="formData.contact_name" name="contact_name" class="form-input">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Téléphone</label>
+                    <input [(ngModel)]="formData.phone" name="phone" type="tel" class="form-input">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input [(ngModel)]="formData.email" name="email" type="email" class="form-input">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Adresse</label>
+                    <textarea [(ngModel)]="formData.address" name="address" rows="2" class="form-textarea"></textarea>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-checkbox">
+                      <input [(ngModel)]="formData.haccp_certified" name="haccp_certified" type="checkbox" id="haccp_certified">
+                      <span>Certifié HACCP</span>
+                    </label>
+                  </div>
+                  @if (formData.haccp_certified) {
+                    <div class="form-group">
+                      <label class="form-label">Date de validation</label>
+                      <input [(ngModel)]="formData.validation_date" name="validation_date" type="date" class="form-input">
+                    </div>
+                  }
                 </div>
-              }
-              <div class="flex gap-2 justify-end">
-                <button type="button" (click)="closeModal()" class="px-4 py-2 border rounded hover:bg-gray-50">Annuler</button>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Enregistrer</button>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="closeModal()">Annuler</button>
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
               </div>
             </form>
           </div>

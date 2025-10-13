@@ -107,50 +107,57 @@ import { HaccpService, NonCompliance } from '../../core/services/haccp.service';
 
       <!-- Modal -->
       @if (showModal()) {
-        <div class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" (click)="closeModal()">
-          <div class="modal-content bg-white rounded-lg p-6 w-full max-w-2xl" (click)="$event.stopPropagation()">
-            <h2 class="text-2xl font-bold mb-4">{{ editingNonCompliance() ? 'Modifier' : 'Déclarer' }} une non-conformité</h2>
-            <form (ngSubmit)="saveNonCompliance()" class="space-y-4">
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium mb-1">Type *</label>
-                  <select [(ngModel)]="formData.type" name="type" required class="w-full px-3 py-2 border rounded">
-                    <option value="Product">Produit</option>
-                    <option value="Temperature">Température</option>
-                    <option value="Hygiene">Hygiène</option>
-                    <option value="Other">Autre</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Statut *</label>
-                  <select [(ngModel)]="formData.status" name="status" required class="w-full px-3 py-2 border rounded">
-                    <option value="Open">Ouverte</option>
-                    <option value="Corrected">Corrigée</option>
-                    <option value="Closed">Fermée</option>
-                  </select>
+        <div class="modal-overlay" (click)="closeModal()">
+          <div class="modal-content max-w-2xl" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h3 class="modal-title">{{ editingNonCompliance() ? 'Modifier' : 'Déclarer' }} une non-conformité</h3>
+              <button class="modal-close" (click)="closeModal()">✕</button>
+            </div>
+            <form (ngSubmit)="saveNonCompliance()">
+              <div class="modal-body">
+                <div class="space-y-4">
+                  <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                      <label class="form-label required">Type</label>
+                      <select [(ngModel)]="formData.type" name="type" required class="form-select">
+                        <option value="Product">Produit</option>
+                        <option value="Temperature">Température</option>
+                        <option value="Hygiene">Hygiène</option>
+                        <option value="Other">Autre</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label required">Statut</label>
+                      <select [(ngModel)]="formData.status" name="status" required class="form-select">
+                        <option value="Open">Ouverte</option>
+                        <option value="Corrected">Corrigée</option>
+                        <option value="Closed">Fermée</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label required">Description</label>
+                    <textarea [(ngModel)]="formData.description" name="description" required rows="3" class="form-textarea"></textarea>
+                  </div>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                      <label class="form-label required">Date de déclaration</label>
+                      <input [(ngModel)]="formData.report_date" name="report_date" type="datetime-local" required class="form-input">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Responsable</label>
+                      <input [(ngModel)]="formData.responsible_id" name="responsible_id" class="form-input">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Action corrective</label>
+                    <textarea [(ngModel)]="formData.corrective_action" name="corrective_action" rows="3" class="form-textarea"></textarea>
+                  </div>
                 </div>
               </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Description *</label>
-                <textarea [(ngModel)]="formData.description" name="description" required rows="3" class="w-full px-3 py-2 border rounded"></textarea>
-              </div>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium mb-1">Date de déclaration *</label>
-                  <input [(ngModel)]="formData.report_date" name="report_date" type="datetime-local" required class="w-full px-3 py-2 border rounded">
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Responsable</label>
-                  <input [(ngModel)]="formData.responsible_id" name="responsible_id" class="w-full px-3 py-2 border rounded">
-                </div>
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Action corrective</label>
-                <textarea [(ngModel)]="formData.corrective_action" name="corrective_action" rows="3" class="w-full px-3 py-2 border rounded"></textarea>
-              </div>
-              <div class="flex gap-2 justify-end">
-                <button type="button" (click)="closeModal()" class="px-4 py-2 border rounded hover:bg-gray-50">Annuler</button>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Enregistrer</button>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="closeModal()">Annuler</button>
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
               </div>
             </form>
           </div>

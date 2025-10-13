@@ -87,7 +87,7 @@ interface NavItem {
                   >
                     <!-- Fond animé au hover -->
                     <div class="absolute inset-0 bg-gradient-to-r from-green-50/0 to-emerald-50/0 group-hover:from-green-50/50 group-hover:to-emerald-50/50 transition-all duration-300 rounded-xl"></div>
-                    
+
                     <!-- Contenu -->
                     <div class="relative flex items-center space-x-3">
                       <div class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-white group-hover:shadow-sm transition-all duration-200">
@@ -95,7 +95,7 @@ interface NavItem {
                       </div>
                       <span class="font-medium">{{ item.label }}</span>
                     </div>
-                    
+
                     <!-- Indicateur actif -->
                     <div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
                       <div class="w-1.5 h-1.5 bg-green-500 rounded"></div>
@@ -106,9 +106,48 @@ interface NavItem {
             </ul>
           </div>
         }
+
+        <!-- Section 3: HACCP (si manager/admin) -->
+        @if (showManagementSection()) {
+          <div class="px-4 mb-8">
+            <div class="flex items-center space-x-2 mb-4">
+              <div class="w-1 h-4 bg-gradient-to-b from-purple-500 to-pink-600 rounded"></div>
+              <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider">
+                HACCP
+              </h3>
+            </div>
+            <ul class="space-y-1 list-none">
+              @for (item of haccpNavItems; track item.path) {
+                <li class="list-none">
+                  <a
+                    [routerLink]="item.path"
+                    routerLinkActive="bg-purple-500 text-white shadow-lg border-r-4 border-purple-600"
+                    class="group flex items-center px-4 py-3 text-sm font-medium rounded-xl text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-all duration-200 relative overflow-hidden no-underline"
+                  >
+                    <!-- Fond animé au hover -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-purple-50/0 to-pink-50/0 group-hover:from-purple-50/50 group-hover:to-pink-50/50 transition-all duration-300 rounded-xl"></div>
+
+                    <!-- Contenu -->
+                    <div class="relative flex items-center space-x-3">
+                      <div class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-white group-hover:shadow-sm transition-all duration-200">
+                        <span class="text-lg group-hover:scale-110 transition-transform duration-200">{{ item.icon }}</span>
+                      </div>
+                      <span class="font-medium">{{ item.label }}</span>
+                    </div>
+
+                    <!-- Indicateur actif -->
+                    <div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div class="w-1.5 h-1.5 bg-purple-500 rounded"></div>
+                    </div>
+                  </a>
+                </li>
+              }
+            </ul>
+          </div>
+        }
       </nav>
 
-      <!-- Section 3: Profil utilisateur (en bas) -->
+      <!-- Section 4: Profil utilisateur (en bas) -->
       <div class="border-t border-gray-100 p-4">
         <!-- Info utilisateur moderne -->
         <div class="mb-4 p-4 bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-2xl border border-gray-200/50 shadow-sm">
@@ -287,7 +326,18 @@ export class SidebarComponent {
     { path: '/manage/tasks', label: 'Tâches', icon: '📝' },
     { path: '/manage/assign-tasks', label: 'Assignation', icon: '📌' },
     { path: '/manage/rooms', label: 'Pièces', icon: '🏠' },
-    { path: '/manage/performers', label: 'Intervenants', icon: '👥' }
+    { path: '/manage/employees', label: 'Employé(e)s', icon: '👥' }
+  ];
+
+  readonly haccpNavItems: NavItem[] = [
+    { path: '/haccp/dashboard', label: 'Dashboard HACCP', icon: '📊' },
+    { path: '/haccp/children', label: 'Enfants', icon: '👶' },
+    { path: '/haccp/meals', label: 'Repas', icon: '🍽️' },
+    { path: '/haccp/products', label: 'Produits', icon: '📦' },
+    { path: '/haccp/suppliers', label: 'Fournisseurs', icon: '🚚' },
+    { path: '/haccp/equipment', label: 'Équipements', icon: '🔧' },
+    { path: '/haccp/non-compliances', label: 'Non-conformités', icon: '⚠️' },
+    { path: '/haccp/documents', label: 'Documents', icon: '📄' }
   ];
   
   // Computed signals
@@ -297,8 +347,20 @@ export class SidebarComponent {
   
   readonly userName = computed(() => {
     const appUser = this.authService.appUser();
+
+    // Si full_name est défini, l'utiliser
     if (appUser?.full_name) return appUser.full_name;
-    
+
+    // Sinon, construire depuis first_name et last_name
+    if (appUser?.first_name && appUser?.last_name) {
+      return `${appUser.first_name} ${appUser.last_name}`;
+    }
+
+    // Sinon, juste first_name ou last_name
+    if (appUser?.first_name) return appUser.first_name;
+    if (appUser?.last_name) return appUser.last_name;
+
+    // Fallback sur l'email Firebase
     const firebaseUser = this.authService.currentUser();
     return firebaseUser?.email?.split('@')[0] || 'Utilisateur';
   });

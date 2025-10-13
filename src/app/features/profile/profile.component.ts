@@ -38,32 +38,32 @@ import { EnterpriseService } from '../../core/services/enterprise.service';
                 <div class="space-y-4">
                   <div class="form-group">
                     <label class="form-label">Nom complet</label>
-                    <input 
-                      type="text" 
-                      class="form-input" 
-                      [value]="user.full_name"
+                    <input
+                      type="text"
+                      class="form-input"
+                      [value]="getFullName(user)"
                       readonly
                     />
                     <div class="form-help">
                       Contactez l'administrateur pour modifier votre nom
                     </div>
                   </div>
-                  
+
                   <div class="form-group">
                     <label class="form-label">Rôle</label>
-                    <input 
-                      type="text" 
-                      class="form-input" 
-                      [value]="getRoleLabel(user.role)"
+                    <input
+                      type="text"
+                      class="form-input"
+                      [value]="getRoleLabel(authService.userRole())"
                       readonly
                     />
                   </div>
-                  
+
                   <div class="form-group">
                     <label class="form-label">Membre depuis</label>
-                    <input 
-                      type="text" 
-                      class="form-input" 
+                    <input
+                      type="text"
+                      class="form-input"
                       [value]="formatDate(user.created_at)"
                       readonly
                     />
@@ -319,11 +319,11 @@ import { EnterpriseService } from '../../core/services/enterprise.service';
               @if (authService.appUser(); as user) {
                 <div class="w-20 h-20 bg-primary-100 rounded mx-auto mb-4 flex items-center justify-center">
                   <span class="text-2xl font-bold text-primary-700">
-                    {{ getUserInitials(user.full_name) }}
+                    {{ getUserInitials(getFullName(user)) }}
                   </span>
                 </div>
-                <h3 class="font-semibold text-gray-900 mb-1">{{ user.full_name }}</h3>
-                <p class="text-sm text-gray-600 mb-4">{{ getRoleLabel(user.role) }}</p>
+                <h3 class="font-semibold text-gray-900 mb-1">{{ getFullName(user) }}</h3>
+                <p class="text-sm text-gray-600 mb-4">{{ getRoleLabel(authService.userRole()) }}</p>
               }
               
               <button class="btn btn-danger btn-sm w-full" (click)="logout()">
@@ -497,6 +497,22 @@ export class ProfileComponent {
     }
   }
 
+  getFullName(user: any): string {
+    if (user.full_name) {
+      return user.full_name;
+    }
+    if (user.first_name && user.last_name) {
+      return `${user.first_name} ${user.last_name}`;
+    }
+    if (user.first_name) {
+      return user.first_name;
+    }
+    if (user.last_name) {
+      return user.last_name;
+    }
+    return 'Utilisateur';
+  }
+
   getUserInitials(fullName: string): string {
     return fullName
       .split(' ')
@@ -506,7 +522,8 @@ export class ProfileComponent {
       .slice(0, 2);
   }
 
-  getRoleLabel(role: string): string {
+  getRoleLabel(role: string | null | undefined): string {
+    if (!role) return 'Utilisateur';
     const labels = {
       admin: 'Administrateur',
       manager: 'Manager',

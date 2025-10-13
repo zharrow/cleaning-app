@@ -72,44 +72,66 @@ import { HaccpService, Child } from '../../core/services/haccp.service';
 
       <!-- Modal -->
       @if (showModal()) {
-        <div class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" (click)="closeModal()">
-          <div class="modal-content bg-white rounded-lg p-6 w-full max-w-md" (click)="$event.stopPropagation()">
-            <h2 class="text-2xl font-bold mb-4">{{ editingChild() ? 'Modifier' : 'Ajouter' }} un enfant</h2>
-            <form (ngSubmit)="saveChild()" class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium mb-1">Prénom *</label>
-                <input [(ngModel)]="formData.first_name" name="first_name" required class="w-full px-3 py-2 border rounded">
+        <div class="modal-overlay" (click)="closeModal()">
+          <div class="modal-content max-w-lg" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h3 class="modal-title">
+                {{ editingChild() ? 'Modifier un enfant' : 'Ajouter un enfant' }}
+              </h3>
+              <button class="modal-close" (click)="closeModal()">✕</button>
+            </div>
+
+            <form (ngSubmit)="saveChild()">
+              <div class="modal-body">
+                <div class="space-y-4">
+                  <div class="form-group">
+                    <label class="form-label required">Prénom</label>
+                    <input [(ngModel)]="formData.first_name" name="first_name" required type="text" class="form-input" placeholder="Prénom de l'enfant">
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label required">Nom</label>
+                    <input [(ngModel)]="formData.last_name" name="last_name" required type="text" class="form-input" placeholder="Nom de l'enfant">
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label required">Date de naissance</label>
+                    <input [(ngModel)]="formData.birth_date" name="birth_date" type="date" required class="form-input">
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label required">Section</label>
+                    <select [(ngModel)]="formData.section" name="section" required class="form-input form-select">
+                      <option value="Babies">Bébés</option>
+                      <option value="Toddlers">Moyens</option>
+                      <option value="Preschoolers">Grands</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Allergies</label>
+                    <textarea [(ngModel)]="formData.allergies" name="allergies" rows="2" class="form-input form-textarea" placeholder="Liste des allergies (optionnel)"></textarea>
+                    @if (formData.allergies) {
+                      <div class="form-help text-red-600">
+                        ⚠️ Attention: Allergies renseignées
+                      </div>
+                    }
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Régime spécial</label>
+                    <textarea [(ngModel)]="formData.specific_diet" name="specific_diet" rows="2" class="form-input form-textarea" placeholder="Régime alimentaire spécifique (optionnel)"></textarea>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Nom *</label>
-                <input [(ngModel)]="formData.last_name" name="last_name" required class="w-full px-3 py-2 border rounded">
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Date de naissance *</label>
-                <input [(ngModel)]="formData.birth_date" name="birth_date" type="date" required class="w-full px-3 py-2 border rounded">
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Section *</label>
-                <select [(ngModel)]="formData.section" name="section" required class="w-full px-3 py-2 border rounded">
-                  <option value="Babies">Bébés</option>
-                  <option value="Toddlers">Moyens</option>
-                  <option value="Preschoolers">Grands</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Allergies</label>
-                <textarea [(ngModel)]="formData.allergies" name="allergies" rows="2" class="w-full px-3 py-2 border rounded"></textarea>
-                @if (formData.allergies) {
-                  <p class="text-xs text-red-600 mt-1">⚠️ Attention: Allergies renseignées</p>
-                }
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Régime spécial</label>
-                <textarea [(ngModel)]="formData.specific_diet" name="specific_diet" rows="2" class="w-full px-3 py-2 border rounded"></textarea>
-              </div>
-              <div class="flex gap-2 justify-end">
-                <button type="button" (click)="closeModal()" class="px-4 py-2 border rounded hover:bg-gray-50">Annuler</button>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Enregistrer</button>
+
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="closeModal()">
+                  Annuler
+                </button>
+                <button type="submit" class="btn btn-primary">
+                  {{ editingChild() ? 'Modifier' : 'Créer' }}
+                </button>
               </div>
             </form>
           </div>

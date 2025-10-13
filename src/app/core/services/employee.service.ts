@@ -3,10 +3,10 @@
  * Angular 19 with Signals and Resource API
  */
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { resource, ResourceRef } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { ApiService } from './api.service';
 import {
   User,
   UserCreate,
@@ -20,8 +20,8 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class EmployeeService {
-  private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/employees`;
+  private readonly api = inject(ApiService);
+  private readonly apiUrl = `/employees`;
 
   // Signals
   readonly refreshTrigger = signal(0);
@@ -32,9 +32,7 @@ export class EmployeeService {
     request: () => ({ trigger: this.refreshTrigger() }),
     loader: async () => {
       try {
-        return await firstValueFrom(
-          this.http.get<UserResponse[]>(this.apiUrl)
-        );
+        return await firstValueFrom(this.api.get<UserResponse[]>(this.apiUrl));
       } catch (error) {
         console.error('Error loading employees:', error);
         throw error;
@@ -49,9 +47,7 @@ export class EmployeeService {
       if (!request.id) return null;
 
       try {
-        return await firstValueFrom(
-          this.http.get<UserResponse>(`${this.apiUrl}/${request.id}`)
-        );
+        return await firstValueFrom(this.api.get<UserResponse>(`${this.apiUrl}/${request.id}`));
       } catch (error) {
         console.error('Error loading employee:', error);
         throw error;
@@ -76,9 +72,7 @@ export class EmployeeService {
    */
   async createEmployee(data: UserCreate): Promise<UserResponse> {
     try {
-      const employee = await firstValueFrom(
-        this.http.post<UserResponse>(this.apiUrl, data)
-      );
+      const employee = await firstValueFrom(this.api.post<UserResponse>(this.apiUrl, data));
       this.refreshTrigger.update(v => v + 1);
       return employee;
     } catch (error) {
@@ -92,9 +86,7 @@ export class EmployeeService {
    */
   async updateEmployee(id: string, data: UserUpdate): Promise<UserResponse> {
     try {
-      const employee = await firstValueFrom(
-        this.http.patch<UserResponse>(`${this.apiUrl}/${id}`, data)
-      );
+      const employee = await firstValueFrom(this.api.patch<UserResponse>(`${this.apiUrl}/${id}`, data));
       this.refreshTrigger.update(v => v + 1);
       return employee;
     } catch (error) {
@@ -108,9 +100,7 @@ export class EmployeeService {
    */
   async updateEmployeePin(id: string, data: UserPinUpdate): Promise<{ message: string }> {
     try {
-      const result = await firstValueFrom(
-        this.http.patch<{ message: string }>(`${this.apiUrl}/${id}/pin`, data)
-      );
+      const result = await firstValueFrom(this.api.patch<{ message: string }>(`${this.apiUrl}/${id}/pin`, data));
       return result;
     } catch (error) {
       console.error('Error updating employee PIN:', error);
@@ -123,9 +113,7 @@ export class EmployeeService {
    */
   async deactivateEmployee(id: string): Promise<UserResponse> {
     try {
-      const employee = await firstValueFrom(
-        this.http.patch<UserResponse>(`${this.apiUrl}/${id}`, { is_active: false })
-      );
+      const employee = await firstValueFrom(this.api.patch<UserResponse>(`${this.apiUrl}/${id}`, { is_active: false }));
       this.refreshTrigger.update(v => v + 1);
       return employee;
     } catch (error) {
@@ -139,9 +127,7 @@ export class EmployeeService {
    */
   async deleteEmployee(id: string): Promise<{ message: string }> {
     try {
-      const result = await firstValueFrom(
-        this.http.delete<{ message: string }>(`${this.apiUrl}/${id}`)
-      );
+      const result = await firstValueFrom(this.api.delete<{ message: string }>(`${this.apiUrl}/${id}`));
       this.refreshTrigger.update(v => v + 1);
       return result;
     } catch (error) {
@@ -155,9 +141,7 @@ export class EmployeeService {
    */
   async getEmployeeRooms(id: string): Promise<string[]> {
     try {
-      const response = await firstValueFrom(
-        this.http.get<{ room_ids: string[] }>(`${this.apiUrl}/${id}/rooms`)
-      );
+      const response = await firstValueFrom(this.api.get<{ room_ids: string[] }>(`${this.apiUrl}/${id}/rooms`));
       return response.room_ids;
     } catch (error) {
       console.error('Error loading employee rooms:', error);
@@ -171,9 +155,7 @@ export class EmployeeService {
   async updateEmployeeRooms(id: string, roomIds: string[]): Promise<string[]> {
     try {
       const data: UserRoomsBulkUpdate = { room_ids: roomIds };
-      const response = await firstValueFrom(
-        this.http.put<{ room_ids: string[] }>(`${this.apiUrl}/${id}/rooms`, data)
-      );
+      const response = await firstValueFrom(this.api.put<{ room_ids: string[] }>(`${this.apiUrl}/${id}/rooms`, data));
       this.refreshTrigger.update(v => v + 1);
       return response.room_ids;
     } catch (error) {
@@ -191,9 +173,7 @@ export class EmployeeService {
         pin_code: pinCode,
         enterprise_id: enterpriseId
       };
-      return await firstValueFrom(
-        this.http.post<UserLoginResponse>(`${this.apiUrl}/login`, data)
-      );
+      return await firstValueFrom(this.api.post<UserLoginResponse>(`${this.apiUrl}/login`, data));
     } catch (error) {
       console.error('Error logging in with PIN:', error);
       throw error;
