@@ -18,9 +18,15 @@ export type AppRole = 'admin' | 'manager' | 'gerante';
 export interface AppUser {
   readonly id: string;
   readonly firebase_uid: string;
-  readonly full_name: string;
-  readonly role: AppRole;
+  readonly email?: string;
+  readonly first_name?: string;
+  readonly last_name?: string;
+  readonly full_name?: string; // Computed from first_name + last_name for Admin, or provided directly
+  readonly role?: AppRole; // Optional for Admin (can be inferred), required for legacy users
+  readonly is_active?: boolean;
+  readonly created_by_id?: string;
   readonly created_at: string;
+  readonly updated_at?: string;
 }
 
 export interface LoginCredentials {
@@ -114,7 +120,18 @@ export class AuthService {
     if (!environment.production && this.devRoleSignal()) {
       return this.devRoleSignal();
     }
-    return this.appUser()?.role ?? null;
+
+    const user = this.appUser();
+    if (!user) return null;
+
+    // Si le rôle est explicitement défini, l'utiliser
+    if (user.role) return user.role;
+
+    // Sinon, déduire le rôle : si l'utilisateur a firebase_uid, c'est un Admin
+    // (User/employés n'ont pas firebase_uid, ils utilisent PIN)
+    if (user.firebase_uid) return 'admin';
+
+    return null;
   });
   
   readonly isAdmin = computed(() => this.userRole() === 'admin');

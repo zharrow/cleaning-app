@@ -150,7 +150,7 @@ import { HaccpService, Meal, Child } from '../../../core/services/haccp.service'
                 <button
                   type="button"
                   *ngFor="let checkpoint of checkpoints"
-                  (click)="tempForm.checkpoint = checkpoint.value"
+                  (click)="setCheckpoint(checkpoint.value)"
                   [class.bg-blue-600]="tempForm.checkpoint === checkpoint.value"
                   [class.text-white]="tempForm.checkpoint === checkpoint.value"
                   [class.bg-gray-200]="tempForm.checkpoint !== checkpoint.value"
@@ -282,6 +282,10 @@ export class TabletHaccpComponent {
     } else {
       this.selectedChildren.set([...current, childId]);
     }
+  }
+
+  setCheckpoint(value: string) {
+    this.tempForm.checkpoint = value as 'Reception' | 'Holding' | 'Service' | 'Storage';
   }
 
   saveMeal() {

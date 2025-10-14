@@ -27,7 +27,7 @@ export interface Supplier {
   email?: string;
   address?: string;
   haccp_certified: boolean;
-  validation_date?: string;
+  validation_date?: string | null;
   created_at: string;
   updated_at?: string;
 }
@@ -51,7 +51,7 @@ export interface Meal {
   enterprise_id: string;
   supplier_id?: string;
   batch_id?: string;
-  responsible_id?: string;
+  responsible_id?: string | null;
   date: string;
   meal_type: 'Breakfast' | 'Lunch' | 'Snack';
   description?: string;
@@ -62,7 +62,7 @@ export interface Meal {
 export interface Temperature {
   id: string;
   meal_id: string;
-  responsible_id?: string;
+  responsible_id?: string | null;
   checkpoint: 'Reception' | 'Holding' | 'Service' | 'Storage';
   temperature: number;
   is_compliant: boolean;
@@ -87,7 +87,7 @@ export interface Equipment {
 export interface NonCompliance {
   id: string;
   enterprise_id: string;
-  responsible_id?: string;
+  responsible_id?: string | null;
   type: 'Product' | 'Temperature' | 'Hygiene' | 'Other';
   description: string;
   report_date: string;
@@ -100,7 +100,7 @@ export interface NonCompliance {
 export interface Document {
   id: string;
   enterprise_id: string;
-  responsible_id?: string;
+  responsible_id?: string | null;
   name: string;
   category: 'Temperatures' | 'Cleaning' | 'Training' | 'Compliance' | 'Other';
   file_path: string;
@@ -121,8 +121,8 @@ export class HaccpService {
   // ==================== CHILDREN ====================
 
   getChildren(isActive?: boolean): Observable<Child[]> {
-    const params = isActive !== undefined ? { is_active: isActive } : {};
-    return this.api.get<Child[]>(`${this.baseUrl}/children`, params);
+    const queryString = isActive !== undefined ? `?is_active=${isActive}` : '';
+    return this.api.get<Child[]>(`${this.baseUrl}/children${queryString}`);
   }
 
   getChild(id: string): Observable<Child> {

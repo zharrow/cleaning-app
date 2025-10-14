@@ -147,7 +147,7 @@ export class SuppliersComponent implements OnInit {
     email: '',
     address: '',
     haccp_certified: false,
-    validation_date: ''
+    validation_date: null
   };
 
   ngOnInit() {
@@ -188,7 +188,7 @@ export class SuppliersComponent implements OnInit {
       email: '',
       address: '',
       haccp_certified: false,
-      validation_date: ''
+      validation_date: null
     };
     this.editingSupplier.set(null);
     this.showModal.set(true);

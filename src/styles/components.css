@@ -669,7 +669,7 @@
   background-color: var(--color-white);
   border-radius: var(--border-radius-2xl);
   box-shadow: var(--shadow-2xl);
-  max-width: 95vw;
+  min-width: 35vw; max-width: 45vw;
   max-height: 90vh;
   overflow: hidden;
   animation: fade-in-scale var(--transition-base) var(--ease-bounce);

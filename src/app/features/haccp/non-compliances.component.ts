@@ -183,7 +183,7 @@ export class NonCompliancesComponent implements OnInit {
     type: 'Product',
     description: '',
     report_date: '',
-    responsible_id: '',
+    responsible_id: null,
     corrective_action: '',
     status: 'Open'
   };
@@ -226,7 +226,7 @@ export class NonCompliancesComponent implements OnInit {
       type: 'Product',
       description: '',
       report_date: new Date().toISOString().slice(0, 16),
-      responsible_id: '',
+      responsible_id: null,
       corrective_action: '',
       status: 'Open'
     };

@@ -6,7 +6,7 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { firstValueFrom, catchError, throwError } from 'rxjs';
-import { Auth } from '@angular/fire/auth';
+import { AuthService } from './auth.service';
 
 /**
  * Types pour la gestion des entreprises
@@ -55,8 +55,8 @@ export interface EnterpriseExistsResponse {
 export class EnterpriseService {
   // Services injectés
   private readonly http = inject(HttpClient);
-  private readonly auth = inject(Auth);
-  
+  private readonly authService = inject(AuthService);
+
   // URL de base pour l'API
   private readonly baseUrl = `${environment.apiUrl}/enterprise`;
   
@@ -83,12 +83,11 @@ export class EnterpriseService {
    * Obtenir les headers d'authentification
    */
   private async getAuthHeaders(): Promise<{ [key: string]: string }> {
-    const user = this.auth.currentUser;
-    if (!user) {
+    const token = await this.authService.getToken();
+    if (!token) {
       throw new Error('Utilisateur non connecté');
     }
-    
-    const token = await user.getIdToken();
+
     return {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'

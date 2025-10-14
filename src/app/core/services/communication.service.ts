@@ -104,10 +104,11 @@ export class CommunicationService {
   // ==================== NOTIFICATIONS ====================
 
   getNotifications(status?: string, type?: string): Observable<Notification[]> {
-    const params: any = {};
-    if (status) params.status_filter = status;
-    if (type) params.type_filter = type;
-    return this.api.get<Notification[]>(`${this.baseUrl}/notifications`, params);
+    const queryParams: string[] = [];
+    if (status) queryParams.push(`status_filter=${status}`);
+    if (type) queryParams.push(`type_filter=${type}`);
+    const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+    return this.api.get<Notification[]>(`${this.baseUrl}/notifications${queryString}`);
   }
 
   getNotification(id: string): Observable<Notification> {
