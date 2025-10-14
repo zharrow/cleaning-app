@@ -17,12 +17,18 @@ import { HaccpService, Meal, Child, Supplier, Temperature } from '../../core/ser
       </div>
 
       <!-- Sélecteur de date -->
-      <div class="date-selector mb-6">
+      <div class="date-selector mb-6 flex gap-2 items-center">
         <input
           [(ngModel)]="selectedDate"
           (ngModelChange)="loadMealsForDate()"
           type="date"
           class="px-4 py-2 border rounded">
+        <button
+          (click)="clearDateFilter()"
+          class="px-4 py-2 border rounded hover:bg-gray-100"
+          title="Afficher tous les repas">
+          Tous les repas
+        </button>
       </div>
 
       <!-- Tabs par type de repas -->
@@ -129,9 +135,9 @@ import { HaccpService, Meal, Child, Supplier, Temperature } from '../../core/ser
                     <div class="form-group">
                       <label class="form-label required">Type de repas</label>
                       <select [(ngModel)]="mealFormData.meal_type" name="meal_type" required class="form-input form-select">
-                        <option value="Breakfast">Petit-déjeuner</option>
-                        <option value="Lunch">Déjeuner</option>
-                        <option value="Snack">Goûter</option>
+                        <option value="BREAKFAST">Petit-déjeuner</option>
+                        <option value="LUNCH">Déjeuner</option>
+                        <option value="SNACK">Goûter</option>
                       </select>
                     </div>
                   </div>
@@ -187,10 +193,10 @@ import { HaccpService, Meal, Child, Supplier, Temperature } from '../../core/ser
                   <div class="form-group">
                     <label class="form-label required">Point de contrôle</label>
                     <select [(ngModel)]="tempFormData.checkpoint" name="checkpoint" required class="form-input form-select">
-                      <option value="Reception">Réception</option>
-                      <option value="Holding">Maintien</option>
-                      <option value="Service">Service</option>
-                      <option value="Storage">Stockage</option>
+                      <option value="RECEPTION">Réception</option>
+                      <option value="HOLDING">Maintien</option>
+                      <option value="SERVICE">Service</option>
+                      <option value="STORAGE">Stockage</option>
                     </select>
                   </div>
 
@@ -248,8 +254,8 @@ export class MealsComponent implements OnInit {
   currentMealForTemp = signal<Meal | null>(null);
 
   selectedDate = new Date().toISOString().split('T')[0];
-  selectedMealType: 'Breakfast' | 'Lunch' | 'Snack' = 'Lunch';
-  mealTypes: Array<'Breakfast' | 'Lunch' | 'Snack'> = ['Breakfast', 'Lunch', 'Snack'];
+  selectedMealType: 'BREAKFAST' | 'LUNCH' | 'SNACK' = 'LUNCH';
+  mealTypes: Array<'BREAKFAST' | 'LUNCH' | 'SNACK'> = ['BREAKFAST', 'LUNCH', 'SNACK'];
 
   mealFormData: Partial<Meal> = this.getEmptyMealForm();
   tempFormData: Partial<Temperature> = this.getEmptyTempForm();
@@ -263,10 +269,26 @@ export class MealsComponent implements OnInit {
 
   loadMealsForDate() {
     this.haccpService.getMeals().subscribe(meals => {
-      const filtered = meals.filter(m => m.date === this.selectedDate);
+      console.log('📊 Tous les meals:', meals);
+      console.log('📅 Selected date:', this.selectedDate);
+
+      // Si aucune date sélectionnée, afficher tous les repas
+      const filtered = this.selectedDate
+        ? meals.filter(m => {
+            const mealDate = typeof m.date === 'string' ? m.date : new Date(m.date).toISOString().split('T')[0];
+            return mealDate === this.selectedDate;
+          })
+        : meals; // Tous les repas si pas de date
+
+      console.log('✅ Filtered meals:', filtered);
       this.meals.set(filtered);
       this.applyMealTypeFilter();
     });
+  }
+
+  clearDateFilter() {
+    this.selectedDate = '';
+    this.loadMealsForDate();
   }
 
   applyMealTypeFilter() {
@@ -350,9 +372,9 @@ export class MealsComponent implements OnInit {
 
   getMealTypeLabel(type: string): string {
     const labels: Record<string, string> = {
-      'Breakfast': 'Petit-déjeuner',
-      'Lunch': 'Déjeuner',
-      'Snack': 'Goûter'
+      'BREAKFAST': 'Petit-déjeuner',
+      'LUNCH': 'Déjeuner',
+      'SNACK': 'Goûter'
     };
     return labels[type] || type;
   }
@@ -360,7 +382,7 @@ export class MealsComponent implements OnInit {
   private getEmptyMealForm(): Partial<Meal> {
     return {
       date: this.selectedDate,
-      meal_type: 'Lunch',
+      meal_type: 'LUNCH',
       description: '',
       supplier_id: undefined,
       batch_id: undefined,
@@ -371,7 +393,7 @@ export class MealsComponent implements OnInit {
   private getEmptyTempForm(): Partial<Temperature> {
     return {
       meal_id: '',
-      checkpoint: 'Reception',
+      checkpoint: 'RECEPTION',
       temperature: 0,
       is_compliant: true,
       observations: '',

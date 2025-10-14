@@ -130,7 +130,7 @@ export class HaccpDashboardComponent implements OnInit {
 
     // Load non-compliances
     this.haccpService.getNonCompliances().subscribe(nc => {
-      const open = nc.filter(n => n.status === 'Open').length;
+      const open = nc.filter(n => n.status === 'OPEN').length;
       this.stats.update(s => ({ ...s, openNonCompliances: open }));
     });
   }

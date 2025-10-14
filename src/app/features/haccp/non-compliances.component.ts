@@ -20,16 +20,16 @@ import { HaccpService, NonCompliance } from '../../core/services/haccp.service';
       <div class="filters flex gap-4 mb-6">
         <select [(ngModel)]="typeFilter" (ngModelChange)="applyFilters()" class="px-3 py-2 border rounded">
           <option value="">Tous les types</option>
-          <option value="Product">Produit</option>
-          <option value="Temperature">Température</option>
-          <option value="Hygiene">Hygiène</option>
-          <option value="Other">Autre</option>
+          <option value="PRODUCT">Produit</option>
+          <option value="TEMPERATURE">Température</option>
+          <option value="HYGIENE">Hygiène</option>
+          <option value="OTHER">Autre</option>
         </select>
         <select [(ngModel)]="statusFilter" (ngModelChange)="applyFilters()" class="px-3 py-2 border rounded">
           <option value="">Tous les statuts</option>
-          <option value="Open">Ouvertes</option>
-          <option value="Corrected">Corrigées</option>
-          <option value="Closed">Fermées</option>
+          <option value="OPEN">Ouvertes</option>
+          <option value="CORRECTED">Corrigées</option>
+          <option value="CLOSED">Fermées</option>
         </select>
         <input
           [(ngModel)]="dateFrom"
@@ -49,30 +49,30 @@ import { HaccpService, NonCompliance } from '../../core/services/haccp.service';
       <div class="non-compliances-list grid grid-cols-1 md:grid-cols-2 gap-4">
         @for (nc of filteredNonCompliances(); track nc.id) {
           <div class="non-compliance-card bg-white p-4 rounded-lg shadow border-l-4"
-               [class.border-red-500]="nc.status === 'Open'"
-               [class.border-orange-500]="nc.status === 'Corrected'"
-               [class.border-green-500]="nc.status === 'Closed'">
+               [class.border-red-500]="nc.status === 'OPEN'"
+               [class.border-orange-500]="nc.status === 'CORRECTED'"
+               [class.border-green-500]="nc.status === 'CLOSED'">
             <div class="flex items-start justify-between mb-2">
               <div class="flex-1">
                 <div class="flex items-center gap-2 mb-1">
                   <span class="inline-block px-2 py-1 text-xs rounded"
-                        [class.bg-blue-100]="nc.type === 'Product'"
-                        [class.text-blue-700]="nc.type === 'Product'"
-                        [class.bg-purple-100]="nc.type === 'Temperature'"
-                        [class.text-purple-700]="nc.type === 'Temperature'"
-                        [class.bg-yellow-100]="nc.type === 'Hygiene'"
-                        [class.text-yellow-700]="nc.type === 'Hygiene'"
-                        [class.bg-gray-100]="nc.type === 'Other'"
-                        [class.text-gray-700]="nc.type === 'Other'">
+                        [class.bg-blue-100]="nc.type === 'PRODUCT'"
+                        [class.text-blue-700]="nc.type === 'PRODUCT'"
+                        [class.bg-purple-100]="nc.type === 'TEMPERATURE'"
+                        [class.text-purple-700]="nc.type === 'TEMPERATURE'"
+                        [class.bg-yellow-100]="nc.type === 'HYGIENE'"
+                        [class.text-yellow-700]="nc.type === 'HYGIENE'"
+                        [class.bg-gray-100]="nc.type === 'OTHER'"
+                        [class.text-gray-700]="nc.type === 'OTHER'">
                     {{ getTypeLabel(nc.type) }}
                   </span>
                   <span class="inline-block px-2 py-1 text-xs rounded font-semibold"
-                        [class.bg-red-100]="nc.status === 'Open'"
-                        [class.text-red-700]="nc.status === 'Open'"
-                        [class.bg-orange-100]="nc.status === 'Corrected'"
-                        [class.text-orange-700]="nc.status === 'Corrected'"
-                        [class.bg-green-100]="nc.status === 'Closed'"
-                        [class.text-green-700]="nc.status === 'Closed'">
+                        [class.bg-red-100]="nc.status === 'OPEN'"
+                        [class.text-red-700]="nc.status === 'OPEN'"
+                        [class.bg-orange-100]="nc.status === 'CORRECTED'"
+                        [class.text-orange-700]="nc.status === 'CORRECTED'"
+                        [class.bg-green-100]="nc.status === 'CLOSED'"
+                        [class.text-green-700]="nc.status === 'CLOSED'">
                     {{ getStatusLabel(nc.status) }}
                   </span>
                 </div>
@@ -120,18 +120,18 @@ import { HaccpService, NonCompliance } from '../../core/services/haccp.service';
                     <div class="form-group">
                       <label class="form-label required">Type</label>
                       <select [(ngModel)]="formData.type" name="type" required class="form-select">
-                        <option value="Product">Produit</option>
-                        <option value="Temperature">Température</option>
-                        <option value="Hygiene">Hygiène</option>
-                        <option value="Other">Autre</option>
+                        <option value="PRODUCT">Produit</option>
+                        <option value="TEMPERATURE">Température</option>
+                        <option value="HYGIENE">Hygiène</option>
+                        <option value="OTHER">Autre</option>
                       </select>
                     </div>
                     <div class="form-group">
                       <label class="form-label required">Statut</label>
                       <select [(ngModel)]="formData.status" name="status" required class="form-select">
-                        <option value="Open">Ouverte</option>
-                        <option value="Corrected">Corrigée</option>
-                        <option value="Closed">Fermée</option>
+                        <option value="OPEN">Ouverte</option>
+                        <option value="CORRECTED">Corrigée</option>
+                        <option value="CLOSED">Fermée</option>
                       </select>
                     </div>
                   </div>
@@ -180,12 +180,12 @@ export class NonCompliancesComponent implements OnInit {
   dateTo = '';
 
   formData: Partial<NonCompliance> = {
-    type: 'Product',
+    type: 'PRODUCT',
     description: '',
     report_date: '',
     responsible_id: null,
     corrective_action: '',
-    status: 'Open'
+    status: 'OPEN'
   };
 
   ngOnInit() {
@@ -223,12 +223,12 @@ export class NonCompliancesComponent implements OnInit {
 
   openModal() {
     this.formData = {
-      type: 'Product',
+      type: 'PRODUCT',
       description: '',
       report_date: new Date().toISOString().slice(0, 16),
       responsible_id: null,
       corrective_action: '',
-      status: 'Open'
+      status: 'OPEN'
     };
     this.editingNonCompliance.set(null);
     this.showModal.set(true);
@@ -270,19 +270,19 @@ export class NonCompliancesComponent implements OnInit {
 
   getTypeLabel(type: string): string {
     const labels: Record<string, string> = {
-      'Product': 'Produit',
-      'Temperature': 'Température',
-      'Hygiene': 'Hygiène',
-      'Other': 'Autre'
+      'PRODUCT': 'Produit',
+      'TEMPERATURE': 'Température',
+      'HYGIENE': 'Hygiène',
+      'OTHER': 'Autre'
     };
     return labels[type] || type;
   }
 
   getStatusLabel(status: string): string {
     const labels: Record<string, string> = {
-      'Open': 'Ouverte',
-      'Corrected': 'Corrigée',
-      'Closed': 'Fermée'
+      'OPEN': 'Ouverte',
+      'CORRECTED': 'Corrigée',
+      'CLOSED': 'Fermée'
     };
     return labels[status] || status;
   }

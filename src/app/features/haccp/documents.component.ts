@@ -25,11 +25,11 @@ import { HaccpService, Document } from '../../core/services/haccp.service';
           class="flex-1 px-3 py-2 border rounded">
         <select [(ngModel)]="categoryFilter" (ngModelChange)="applyFilters()" class="px-3 py-2 border rounded">
           <option value="">Toutes les catégories</option>
-          <option value="Temperatures">Températures</option>
-          <option value="Cleaning">Nettoyage</option>
-          <option value="Training">Formation</option>
-          <option value="Compliance">Conformité</option>
-          <option value="Other">Autre</option>
+          <option value="TEMPERATURES">Températures</option>
+          <option value="CLEANING">Nettoyage</option>
+          <option value="TRAINING">Formation</option>
+          <option value="COMPLIANCE">Conformité</option>
+          <option value="OTHER">Autre</option>
         </select>
         <input
           [(ngModel)]="dateFrom"
@@ -69,16 +69,16 @@ import { HaccpService, Document } from '../../core/services/haccp.service';
                 </td>
                 <td class="px-4 py-3">
                   <span class="inline-block px-2 py-1 text-xs rounded"
-                        [class.bg-blue-100]="document.category === 'Temperatures'"
-                        [class.text-blue-700]="document.category === 'Temperatures'"
-                        [class.bg-green-100]="document.category === 'Cleaning'"
-                        [class.text-green-700]="document.category === 'Cleaning'"
-                        [class.bg-purple-100]="document.category === 'Training'"
-                        [class.text-purple-700]="document.category === 'Training'"
-                        [class.bg-orange-100]="document.category === 'Compliance'"
-                        [class.text-orange-700]="document.category === 'Compliance'"
-                        [class.bg-gray-100]="document.category === 'Other'"
-                        [class.text-gray-700]="document.category === 'Other'">
+                        [class.bg-blue-100]="document.category === 'TEMPERATURES'"
+                        [class.text-blue-700]="document.category === 'TEMPERATURES'"
+                        [class.bg-green-100]="document.category === 'CLEANING'"
+                        [class.text-green-700]="document.category === 'CLEANING'"
+                        [class.bg-purple-100]="document.category === 'TRAINING'"
+                        [class.text-purple-700]="document.category === 'TRAINING'"
+                        [class.bg-orange-100]="document.category === 'COMPLIANCE'"
+                        [class.text-orange-700]="document.category === 'COMPLIANCE'"
+                        [class.bg-gray-100]="document.category === 'OTHER'"
+                        [class.text-gray-700]="document.category === 'OTHER'">
                     {{ getCategoryLabel(document.category) }}
                   </span>
                 </td>
@@ -130,11 +130,11 @@ import { HaccpService, Document } from '../../core/services/haccp.service';
                     <div class="form-group">
                       <label class="form-label required">Catégorie</label>
                       <select [(ngModel)]="formData.category" name="category" required class="form-select">
-                        <option value="Temperatures">Températures</option>
-                        <option value="Cleaning">Nettoyage</option>
-                        <option value="Training">Formation</option>
-                        <option value="Compliance">Conformité</option>
-                        <option value="Other">Autre</option>
+                        <option value="TEMPERATURES">Températures</option>
+                        <option value="CLEANING">Nettoyage</option>
+                        <option value="TRAINING">Formation</option>
+                        <option value="COMPLIANCE">Conformité</option>
+                        <option value="OTHER">Autre</option>
                       </select>
                     </div>
                     <div class="form-group">
@@ -184,7 +184,7 @@ export class DocumentsComponent implements OnInit {
 
   formData: Partial<Document> = {
     name: '',
-    category: 'Temperatures',
+    category: 'TEMPERATURES',
     file_path: '',
     creation_date: '',
     retention_period: '',
@@ -231,7 +231,7 @@ export class DocumentsComponent implements OnInit {
   openModal() {
     this.formData = {
       name: '',
-      category: 'Temperatures',
+      category: 'TEMPERATURES',
       file_path: '',
       creation_date: new Date().toISOString().split('T')[0],
       retention_period: '',
@@ -279,11 +279,11 @@ export class DocumentsComponent implements OnInit {
 
   getCategoryLabel(category: string): string {
     const labels: Record<string, string> = {
-      'Temperatures': 'Températures',
-      'Cleaning': 'Nettoyage',
-      'Training': 'Formation',
-      'Compliance': 'Conformité',
-      'Other': 'Autre'
+      'TEMPERATURES': 'Températures',
+      'CLEANING': 'Nettoyage',
+      'TRAINING': 'Formation',
+      'COMPLIANCE': 'Conformité',
+      'OTHER': 'Autre'
     };
     return labels[category] || category;
   }

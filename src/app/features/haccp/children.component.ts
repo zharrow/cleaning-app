@@ -20,9 +20,9 @@ import { HaccpService, Child } from '../../core/services/haccp.service';
       <div class="filters flex gap-4 mb-6">
         <select [(ngModel)]="selectedSection" (ngModelChange)="applyFilters()" class="px-3 py-2 border rounded">
           <option value="">Toutes les sections</option>
-          <option value="Babies">Bébés</option>
-          <option value="Toddlers">Moyens</option>
-          <option value="Preschoolers">Grands</option>
+          <option value="BABIES">Bébés</option>
+          <option value="TODDLERS">Moyens</option>
+          <option value="PRESCHOOLERS">Grands</option>
         </select>
         <select [(ngModel)]="showActive" (ngModelChange)="applyFilters()" class="px-3 py-2 border rounded">
           <option value="true">Actifs uniquement</option>
@@ -43,9 +43,9 @@ import { HaccpService, Child } from '../../core/services/haccp.service';
                 <h3 class="font-semibold">{{ child.first_name }} {{ child.last_name }}</h3>
                 <p class="text-sm text-gray-500">{{ getAge(child.birth_date) }} ans</p>
                 <span class="inline-block px-2 py-1 text-xs rounded mt-1"
-                      [class.bg-blue-100]="child.section === 'Babies'"
-                      [class.bg-green-100]="child.section === 'Toddlers'"
-                      [class.bg-purple-100]="child.section === 'Preschoolers'">
+                      [class.bg-blue-100]="child.section === 'BABIES'"
+                      [class.bg-green-100]="child.section === 'TODDLERS'"
+                      [class.bg-purple-100]="child.section === 'PRESCHOOLERS'">
                   {{ getSectionLabel(child.section) }}
                 </span>
                 @if (child.allergies) {
@@ -102,9 +102,9 @@ import { HaccpService, Child } from '../../core/services/haccp.service';
                   <div class="form-group">
                     <label class="form-label required">Section</label>
                     <select [(ngModel)]="formData.section" name="section" required class="form-input form-select">
-                      <option value="Babies">Bébés</option>
-                      <option value="Toddlers">Moyens</option>
-                      <option value="Preschoolers">Grands</option>
+                      <option value="BABIES">Bébés</option>
+                      <option value="TODDLERS">Moyens</option>
+                      <option value="PRESCHOOLERS">Grands</option>
                     </select>
                   </div>
 
@@ -155,7 +155,7 @@ export class ChildrenComponent implements OnInit {
     first_name: '',
     last_name: '',
     birth_date: '',
-    section: 'Babies',
+    section: 'BABIES',
     allergies: '',
     specific_diet: ''
   };
@@ -191,7 +191,7 @@ export class ChildrenComponent implements OnInit {
       first_name: '',
       last_name: '',
       birth_date: '',
-      section: 'Babies',
+      section: 'BABIES',
       allergies: '',
       specific_diet: ''
     };
@@ -243,9 +243,9 @@ export class ChildrenComponent implements OnInit {
 
   getSectionLabel(section: string): string {
     const labels: Record<string, string> = {
-      'Babies': 'Bébés',
-      'Toddlers': 'Moyens',
-      'Preschoolers': 'Grands'
+      'BABIES': 'Bébés',
+      'TODDLERS': 'Moyens',
+      'PRESCHOOLERS': 'Grands'
     };
     return labels[section] || section;
   }

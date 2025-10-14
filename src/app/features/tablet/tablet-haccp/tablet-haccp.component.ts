@@ -48,28 +48,28 @@ import { HaccpService, Meal, Child } from '../../../core/services/haccp.service'
               <div class="grid grid-cols-3 gap-4">
                 <button
                   type="button"
-                  (click)="mealForm.meal_type = 'Breakfast'"
-                  [class.bg-blue-600]="mealForm.meal_type === 'Breakfast'"
-                  [class.text-white]="mealForm.meal_type === 'Breakfast'"
-                  [class.bg-gray-200]="mealForm.meal_type !== 'Breakfast'"
+                  (click)="mealForm.meal_type = 'BREAKFAST'"
+                  [class.bg-blue-600]="mealForm.meal_type === 'BREAKFAST'"
+                  [class.text-white]="mealForm.meal_type === 'BREAKFAST'"
+                  [class.bg-gray-200]="mealForm.meal_type !== 'BREAKFAST'"
                   class="py-6 rounded-xl text-2xl font-semibold">
                   Petit-déjeuner
                 </button>
                 <button
                   type="button"
-                  (click)="mealForm.meal_type = 'Lunch'"
-                  [class.bg-blue-600]="mealForm.meal_type === 'Lunch'"
-                  [class.text-white]="mealForm.meal_type === 'Lunch'"
-                  [class.bg-gray-200]="mealForm.meal_type !== 'Lunch'"
+                  (click)="mealForm.meal_type = 'LUNCH'"
+                  [class.bg-blue-600]="mealForm.meal_type === 'LUNCH'"
+                  [class.text-white]="mealForm.meal_type === 'LUNCH'"
+                  [class.bg-gray-200]="mealForm.meal_type !== 'LUNCH'"
                   class="py-6 rounded-xl text-2xl font-semibold">
                   Déjeuner
                 </button>
                 <button
                   type="button"
-                  (click)="mealForm.meal_type = 'Snack'"
-                  [class.bg-blue-600]="mealForm.meal_type === 'Snack'"
-                  [class.text-white]="mealForm.meal_type === 'Snack'"
-                  [class.bg-gray-200]="mealForm.meal_type !== 'Snack'"
+                  (click)="mealForm.meal_type = 'SNACK'"
+                  [class.bg-blue-600]="mealForm.meal_type === 'SNACK'"
+                  [class.text-white]="mealForm.meal_type === 'SNACK'"
+                  [class.bg-gray-200]="mealForm.meal_type !== 'SNACK'"
                   class="py-6 rounded-xl text-2xl font-semibold">
                   Goûter
                 </button>
@@ -233,21 +233,21 @@ export class TabletHaccpComponent {
   selectedChildren = signal<string[]>([]);
 
   checkpoints = [
-    { value: 'Reception', label: 'Réception' },
-    { value: 'Holding', label: 'Maintien' },
-    { value: 'Service', label: 'Service' },
-    { value: 'Storage', label: 'Stockage' }
+    { value: 'RECEPTION', label: 'Réception' },
+    { value: 'HOLDING', label: 'Maintien' },
+    { value: 'SERVICE', label: 'Service' },
+    { value: 'STORAGE', label: 'Stockage' }
   ];
 
   mealForm = {
     date: new Date().toISOString().split('T')[0],
-    meal_type: 'Lunch' as 'Breakfast' | 'Lunch' | 'Snack',
+    meal_type: 'LUNCH' as 'BREAKFAST' | 'LUNCH' | 'SNACK',
     description: ''
   };
 
   tempForm = {
     meal_id: '',
-    checkpoint: 'Reception' as 'Reception' | 'Holding' | 'Service' | 'Storage',
+    checkpoint: 'RECEPTION' as 'RECEPTION' | 'HOLDING' | 'SERVICE' | 'STORAGE',
     temperature: 0,
     is_compliant: true,
     observations: '',
@@ -285,7 +285,7 @@ export class TabletHaccpComponent {
   }
 
   setCheckpoint(value: string) {
-    this.tempForm.checkpoint = value as 'Reception' | 'Holding' | 'Service' | 'Storage';
+    this.tempForm.checkpoint = value as 'RECEPTION' | 'HOLDING' | 'SERVICE' | 'STORAGE';
   }
 
   saveMeal() {
@@ -322,9 +322,9 @@ export class TabletHaccpComponent {
 
   getMealLabel(meal: Meal): string {
     const types: Record<string, string> = {
-      'Breakfast': 'Petit-déjeuner',
-      'Lunch': 'Déjeuner',
-      'Snack': 'Goûter'
+      'BREAKFAST': 'Petit-déjeuner',
+      'LUNCH': 'Déjeuner',
+      'SNACK': 'Goûter'
     };
     return `${types[meal.meal_type]} - ${meal.description?.substring(0, 30) || 'Sans description'}`;
   }

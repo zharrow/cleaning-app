@@ -10,7 +10,7 @@ export interface Child {
   last_name: string;
   first_name: string;
   birth_date: string;
-  section: 'Babies' | 'Toddlers' | 'Preschoolers';
+  section: 'BABIES' | 'TODDLERS' | 'PRESCHOOLERS';
   allergies?: string;
   specific_diet?: string;
   is_active: boolean;
@@ -53,7 +53,7 @@ export interface Meal {
   batch_id?: string;
   responsible_id?: string | null;
   date: string;
-  meal_type: 'Breakfast' | 'Lunch' | 'Snack';
+  meal_type: 'BREAKFAST' | 'LUNCH' | 'SNACK';
   description?: string;
   created_at: string;
   updated_at?: string;
@@ -63,7 +63,7 @@ export interface Temperature {
   id: string;
   meal_id: string;
   responsible_id?: string | null;
-  checkpoint: 'Reception' | 'Holding' | 'Service' | 'Storage';
+  checkpoint: 'RECEPTION' | 'HOLDING' | 'SERVICE' | 'STORAGE';
   temperature: number;
   is_compliant: boolean;
   observations?: string;
@@ -88,11 +88,11 @@ export interface NonCompliance {
   id: string;
   enterprise_id: string;
   responsible_id?: string | null;
-  type: 'Product' | 'Temperature' | 'Hygiene' | 'Other';
+  type: 'PRODUCT' | 'TEMPERATURE' | 'HYGIENE' | 'OTHER';
   description: string;
   report_date: string;
   corrective_action?: string;
-  status: 'Open' | 'Corrected' | 'Closed';
+  status: 'OPEN' | 'CORRECTED' | 'CLOSED';
   created_at: string;
   updated_at?: string;
 }
@@ -102,7 +102,7 @@ export interface Document {
   enterprise_id: string;
   responsible_id?: string | null;
   name: string;
-  category: 'Temperatures' | 'Cleaning' | 'Training' | 'Compliance' | 'Other';
+  category: 'TEMPERATURES' | 'CLEANING' | 'TRAINING' | 'COMPLIANCE' | 'OTHER';
   file_path: string;
   creation_date: string;
   retention_period?: string;

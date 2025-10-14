@@ -18,6 +18,9 @@ import {
   UserRoomsBulkUpdate
 } from '../../shared/models/user.models';
 
+// Export types for external use
+export type { User, UserCreate, UserUpdate, UserResponse };
+
 @Injectable({ providedIn: 'root' })
 export class EmployeeService {
   private readonly api = inject(ApiService);
